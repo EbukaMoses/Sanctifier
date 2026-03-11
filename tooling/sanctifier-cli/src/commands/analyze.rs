@@ -389,22 +389,6 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
         }
     }
 
-    if !custom_matches.is_empty() {
-        println!("\n{} Found Custom Rule matches!", "⚠️".yellow());
-        for m in custom_matches {
-            let sev_icon = match m.severity {
-                sanctifier_core::RuleSeverity::Error => "❌".red(),
-                sanctifier_core::RuleSeverity::Warning => "⚠️".yellow(),
-                sanctifier_core::RuleSeverity::Info => "ℹ️".blue(),
-            };
-            println!(
-                "   {} [{}|{}]: {}",
-                sev_icon,
-                finding_codes::CUSTOM_RULE_MATCH.bold(),
-                m.rule_name.bold(),
-                m.snippet
-            );
-        }
         }
     }
 

@@ -46,13 +46,15 @@ jobs:
         run: cargo build -p sanctifier-cli -p sanctifier-core
 
       - name: Run All Tests
-        run: cargo test -p sanctifier-cli -p sanctifier-core --all-features
+        run: |
+          cargo test -p sanctifier-core --all-features
+          cd tooling/sanctifier-cli && cargo test
 
       - name: Install tarpaulin
         run: cargo install cargo-tarpaulin || true
 
       - name: Generate Coverage Report
-        run: cargo tarpaulin --out Xml
+        run: cargo tarpaulin -p sanctifier-core --out Xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -61,4 +63,4 @@ jobs:
           fail_ci_if_error: false
 
       - name: Build Release CLI
-        run: cargo build --release -p sanctifier-cli
+        run: cd tooling/sanctifier-cli && cargo build --release

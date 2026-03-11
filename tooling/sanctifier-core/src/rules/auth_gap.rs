@@ -77,7 +77,12 @@ impl Rule for AuthGapRule {
                             let mut has_mutation = false;
                             let mut has_read = false;
                             let mut has_auth = false;
-                            check_fn_body(&f.block, &mut has_mutation, &mut has_read, &mut has_auth);
+                            check_fn_body(
+                                &f.block,
+                                &mut has_mutation,
+                                &mut has_read,
+                                &mut has_auth,
+                            );
                             if has_mutation && !has_read && !has_auth {
                                 // Add require_auth() as the first statement in the function
                                 if let Some(first_stmt) = f.block.stmts.first() {
