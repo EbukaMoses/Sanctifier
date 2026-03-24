@@ -4,7 +4,7 @@ use crate::commands::webhook::{
 use clap::Args;
 use colored::*;
 use sanctifier_core::finding_codes;
-use sanctifier_core::{Analyzer, SanctifyConfig, SizeWarningLevel};
+use sanctifier_core::{Analyzer, InstanceStorageRisk, SanctifyConfig, SizeWarningLevel};
 use serde_json;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -99,6 +99,7 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
     let mut smt_issues = Vec::new();
     let mut sep41_checked_contracts = Vec::new();
     let mut sep41_issues = Vec::new();
+    let mut instance_storage_risks: Vec<InstanceStorageRisk> = Vec::new();
 
     if path.is_dir() {
         walk_dir(
@@ -119,6 +120,7 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
             &mut smt_issues,
             &mut sep41_checked_contracts,
             &mut sep41_issues,
+            &mut instance_storage_risks,
         )?;
     } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
         if let Ok(content) = fs::read_to_string(path) {
@@ -146,6 +148,12 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
                     sep41_issues.push(issue);
                 }
             }
+
+            let mut inst = analyzer.scan_instance_storage_risks(&content);
+            for i in &mut inst {
+                i.snippet = format!("{}:{}: {}", file_name, i.line, i.snippet);
+            }
+            instance_storage_risks.extend(inst);
         }
     }
 
@@ -163,7 +171,8 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
             .map(|r| r.findings.len())
             .sum::<usize>()
         + smt_issues.len()
-        + sep41_issues.len();
+        + sep41_issues.len()
+        + instance_storage_risks.len();
 
     let has_critical =
         !auth_gaps.is_empty() || panic_issues.iter().any(|p| p.issue_type == "panic!");
@@ -207,6 +216,7 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
             "smt_issues": smt_issues,
             "sep41_checked_contracts": sep41_checked_contracts,
             "sep41_issues": sep41_issues,
+            "instance_storage_risks": instance_storage_risks,
             "vulnerability_db_matches": vuln_matches,
             "vulnerability_db_version": vuln_db.version,
             "metadata": {
@@ -229,6 +239,7 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
                 "unhandled_results": unhandled_results.len(),
                 "smt_issues": smt_issues.len(),
                 "sep41_issues": sep41_issues.len(),
+                "instance_storage_risks": instance_storage_risks.len(),
                 "has_critical": has_critical,
                 "has_high": has_high,
             },
@@ -313,6 +324,12 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
                     "message": issue.message,
                     "expected_signature": issue.expected_signature,
                     "actual_signature": issue.actual_signature,
+                })).collect::<Vec<_>>(),
+                "instance_storage_risks": instance_storage_risks.iter().map(|r| serde_json::json!({
+                    "code": finding_codes::INSTANCE_STORAGE_LARGE_DATA,
+                    "line": r.line,
+                    "message": r.message,
+                    "snippet": r.snippet,
                 })).collect::<Vec<_>>(),
             },
         });
@@ -400,6 +417,24 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
                 warning.struct_name.bold()
             );
             println!("      Size: {} bytes", warning.estimated_size);
+        }
+    }
+
+    if instance_storage_risks.is_empty() {
+        println!("{} No instance-storage large-data hints.", "✅".green());
+    } else {
+        println!(
+            "\n{} Instance storage may be hosting large / per-user data!",
+            "⚠️".yellow()
+        );
+        for risk in &instance_storage_risks {
+            println!(
+                "   {} [{}] line {}",
+                "->".yellow(),
+                finding_codes::INSTANCE_STORAGE_LARGE_DATA.bold(),
+                risk.line
+            );
+            println!("      {}", risk.message);
         }
     }
 
@@ -584,6 +619,7 @@ fn walk_dir(
     smt_issues: &mut Vec<sanctifier_core::smt::SmtInvariantIssue>,
     sep41_checked_contracts: &mut Vec<String>,
     sep41_issues: &mut Vec<sanctifier_core::Sep41Issue>,
+    instance_storage_risks: &mut Vec<InstanceStorageRisk>,
 ) -> anyhow::Result<()> {
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
@@ -617,6 +653,7 @@ fn walk_dir(
                 smt_issues,
                 sep41_checked_contracts,
                 sep41_issues,
+                instance_storage_risks,
             )?;
         } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
             if let Ok(content) = fs::read_to_string(&path) {
@@ -696,6 +733,12 @@ fn walk_dir(
                         sep41_issues.push(issue);
                     }
                 }
+
+                let mut inst = analyzer.scan_instance_storage_risks(&content);
+                for i in &mut inst {
+                    i.snippet = format!("{}:{}: {}", file_name, i.line, i.snippet);
+                }
+                instance_storage_risks.extend(inst);
             }
         }
     }

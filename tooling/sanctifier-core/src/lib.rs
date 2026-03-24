@@ -13,6 +13,7 @@ use syn::spanned::Spanned;
 use syn::visit::{self, Visit};
 use syn::{parse_str, Fields, File, Item, Meta, Type};
 
+pub use rules::instance_storage::InstanceStorageRisk;
 pub use rules::{Rule, RuleRegistry, RuleViolation, Severity};
 pub use sep41::{Sep41Issue, Sep41IssueKind, Sep41VerificationReport};
 
@@ -1042,6 +1043,11 @@ impl Analyzer {
 
     pub fn scan_unhandled_results(&self, source: &str) -> Vec<UnhandledResultIssue> {
         with_panic_guard(|| self.scan_unhandled_results_impl(source))
+    }
+
+    /// Heuristic: `instance().set` with map/vec/string/profile-like payloads (see SEP/Soroban storage guidance).
+    pub fn scan_instance_storage_risks(&self, source: &str) -> Vec<InstanceStorageRisk> {
+        with_panic_guard(|| crate::rules::instance_storage::scan_instance_storage_risks(source))
     }
 
     fn scan_unhandled_results_impl(&self, source: &str) -> Vec<UnhandledResultIssue> {
@@ -2591,6 +2597,7 @@ mod tests {
         let registry = RuleRegistry::default();
         let rules = registry.available_rules();
         assert!(rules.contains(&"auth_gap"));
+        assert!(rules.contains(&"instance_storage_large_data"));
         assert!(rules.contains(&"ledger_size"));
         assert!(rules.contains(&"panic_detection"));
         assert!(rules.contains(&"arithmetic_overflow"));

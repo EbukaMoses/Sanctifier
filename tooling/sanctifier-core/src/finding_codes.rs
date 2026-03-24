@@ -12,6 +12,7 @@ pub const UNHANDLED_RESULT: &str = "S009";
 pub const UPGRADE_RISK: &str = "S010";
 pub const SMT_INVARIANT_VIOLATION: &str = "S011";
 pub const SEP41_INTERFACE_DEVIATION: &str = "S012";
+pub const INSTANCE_STORAGE_LARGE_DATA: &str = "S013";
 
 #[derive(Debug, Clone, Serialize)]
 pub struct FindingCode {
@@ -82,6 +83,11 @@ pub fn all_finding_codes() -> Vec<FindingCode> {
             category: "token_interface",
             description: "SEP-41 token interface compatibility or authorization deviation",
         },
+        FindingCode {
+            code: INSTANCE_STORAGE_LARGE_DATA,
+            category: "storage_limits",
+            description: "Large or per-user data stored in instance storage instead of persistent/temporary",
+        },
     ]
 }
 
@@ -108,5 +114,6 @@ mod tests {
         assert!(codes.iter().any(|c| c.code == UNSAFE_PATTERN));
         assert!(codes.iter().any(|c| c.code == CUSTOM_RULE_MATCH));
         assert!(codes.iter().any(|c| c.code == SEP41_INTERFACE_DEVIATION));
+        assert!(codes.iter().any(|c| c.code == INSTANCE_STORAGE_LARGE_DATA));
     }
 }
