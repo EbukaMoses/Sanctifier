@@ -1,5 +1,7 @@
 # Sanctifier 🛡️
 
+[![Codecov](https://codecov.io/gh/HyperSafeD/Sanctifier/graph/badge.svg)](https://codecov.io/gh/HyperSafeD/Sanctifier)
+
 <p align="center">
   <img src="branding/logo.png" width="300" alt="Sanctifier Logo">
 </p>
