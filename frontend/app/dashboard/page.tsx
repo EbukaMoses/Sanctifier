@@ -151,6 +151,12 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-4">
           <Link
+            href="/visualization"
+            className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-50 transition-colors"
+          >
+            Contract Visualization
+          </Link>
+          <Link
             href="/terminal"
             className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-zinc-50 transition-colors"
           >
