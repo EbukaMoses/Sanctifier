@@ -12,7 +12,10 @@ env:
 jobs:
   ci:
     name: Continuous Integration
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
@@ -36,10 +39,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libz3-dev libdbus-1-dev
+      - name: Install Z3
+        uses: z3prover/setup-z3@v1
+        with:
+          z3-version: 4.12.2
+
+      - name: Install DBus (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev
 
       - name: Check formatting
         run: cargo fmt --all --check
@@ -57,15 +64,18 @@ jobs:
       - name: Run All Tests
         run: |
           cargo test -p sanctifier-core --all-features
-          cd tooling/sanctifier-cli && cargo test
+          cargo test -p sanctifier-cli
 
-      - name: Install tarpaulin
+      - name: Install tarpaulin (Linux only)
+        if: runner.os == 'Linux'
         run: cargo install cargo-tarpaulin || true
 
-      - name: Generate Coverage Report
+      - name: Generate Coverage Report (Linux only)
+        if: runner.os == 'Linux'
         run: cargo tarpaulin -p sanctifier-core --out Xml
 
-      - name: Upload coverage to Codecov
+      - name: Upload coverage to Codecov (Linux only)
+        if: runner.os == 'Linux'
         uses: codecov/codecov-action@0f8570b1a125f4937846a11fcfa3bcd548bd8c97 # v4.6.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

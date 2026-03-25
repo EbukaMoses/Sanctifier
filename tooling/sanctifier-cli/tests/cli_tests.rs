@@ -411,3 +411,27 @@ fn test_analyze_with_custom_vuln_db() {
         .assert()
         .success();
 }
+
+#[test]
+fn test_analyze_windows_path_separators() {
+    let mut cmd = Command::cargo_bin("sanctifier").unwrap();
+    let fixture_path = if cfg!(windows) {
+        "tests\\fixtures\\valid_contract.rs".to_string()
+    } else {
+        // On Unix, we still want to test that if we pass backslashes,
+        // the CLI (or the test environment) can handle it if we've implemented normalization,
+        // but for now let's just use the platform-specific path to ensure CI passes.
+        // Actually, the requirement said "uses backslashes in --path arg".
+        // Let's try to normalize it in the CLI so this test passes on Unix too.
+        "tests\\fixtures\\valid_contract.rs".to_string()
+    };
+
+    // We need to make sure the file exists at that literal path if we are on Unix and not normalizing.
+    // If we ARE normalizing in the CLI, then "tests\\fixtures\\valid_contract.rs" will become "tests/fixtures/valid_contract.rs".
+    
+    cmd.arg("analyze")
+        .arg(fixture_path)
+        .assert()
+        .success()
+        .stdout(predicates::str::contains("Static analysis complete."));
+}

@@ -1,6 +1,8 @@
 [workspace]
 members = [
     "tooling/sanctifier-core",
+    "tooling/sanctifier-cli",
+    "tooling/sanctifier-wasm",
     "contracts/vulnerable-contract",
     "contracts/token-with-bugs",
     "contracts/amm-pool",

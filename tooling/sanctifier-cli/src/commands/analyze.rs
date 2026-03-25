@@ -69,13 +69,24 @@ pub(crate) struct FileAnalysisResult {
 // ── Entry point ──────────────────────────────────────────────────────────────
 
 pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
-    let path = &args.path;
+    let mut path = args.path.clone();
+    
+    // Normalize path separators: ensure backslashes provided by users familiar with Windows 
+    // are converted to forward slashes on Unix systems to allow cross-platform path strings.
+    #[cfg(not(windows))]
+    {
+        let s = path.to_string_lossy();
+        if s.contains('\\') {
+            path = PathBuf::from(s.replace('\\', "/"));
+        }
+    }
+
     let format = &args.format;
     let _limit = args.limit;
     let is_json = format == "json";
     let timeout_secs = args.timeout;
 
-    if !is_soroban_project(path) {
+    if !is_soroban_project(&path) {
         if is_json {
             let err = serde_json::json!({
                 "error": format!("{:?} is not a valid Soroban project", path),
@@ -95,7 +106,7 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
     info!(target: "sanctifier", path = %path.display(), "Valid Soroban project found");
     info!(target: "sanctifier", path = %path.display(), "Analyzing contract");
 
-    let mut config = load_config(path);
+    let mut config = load_config(&path);
     config.ledger_limit = args.limit;
     let analyzer = Arc::new(Analyzer::new(config));
 
@@ -122,7 +133,7 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
 
     // ── Phase 1: collect all .rs file paths ──────────────────────────────
     let rs_files = if path.is_dir() {
-        collect_rs_files(path, &analyzer.config.ignore_paths)
+        collect_rs_files(&path, &analyzer.config.ignore_paths)
     } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
         vec![path.clone()]
     } else {
@@ -750,11 +761,12 @@ where
 /// `ignore_paths`.
 pub(crate) fn collect_rs_files(dir: &Path, ignore_paths: &[String]) -> Vec<PathBuf> {
     let mut out = Vec::new();
-    collect_rs_files_inner(dir, ignore_paths, &mut out);
+    let ignore_patterns: Vec<PathBuf> = ignore_paths.iter().map(PathBuf::from).collect();
+    collect_rs_files_inner(dir, &ignore_patterns, &mut out);
     out
 }
 
-fn collect_rs_files_inner(dir: &Path, ignore_paths: &[String], out: &mut Vec<PathBuf>) {
+fn collect_rs_files_inner(dir: &Path, ignore_patterns: &[PathBuf], out: &mut Vec<PathBuf>) {
     let entries = match fs::read_dir(dir) {
         Ok(e) => e,
         Err(_) => return,
@@ -762,9 +774,9 @@ fn collect_rs_files_inner(dir: &Path, ignore_paths: &[String], out: &mut Vec<Pat
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {
-            let is_ignored = ignore_paths.iter().any(|p| path.ends_with(p));
+            let is_ignored = ignore_patterns.iter().any(|p| path.ends_with(p));
             if !is_ignored {
-                collect_rs_files_inner(&path, ignore_paths, out);
+                collect_rs_files_inner(&path, ignore_patterns, out);
             }
         } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
             out.push(path);
