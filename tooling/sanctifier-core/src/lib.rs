@@ -39,6 +39,8 @@ pub mod rules;
 /// SEP-41 token-interface verification.
 pub mod sep41;
 /// Z3 SMT solver integration for formal verification.
+/// Only available when the `smt` feature is enabled (default).
+#[cfg(feature = "smt")]
 pub mod smt;
 /// Storage-key collision detection (internal).
 mod storage_collision;
@@ -581,10 +583,13 @@ impl Analyzer {
     }
 
     /// Run lightweight formal-verification checks via Z3.
+    /// Only available when the `smt` feature is enabled (default).
+    #[cfg(feature = "smt")]
     pub fn verify_smt_invariants(&self, source: &str) -> Vec<smt::SmtInvariantIssue> {
         with_panic_guard(|| self.verify_smt_invariants_impl(source))
     }
 
+    #[cfg(feature = "smt")]
     fn verify_smt_invariants_impl(&self, source: &str) -> Vec<smt::SmtInvariantIssue> {
         let file = match parse_str::<File>(source) {
             Ok(f) => f,
