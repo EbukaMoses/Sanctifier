@@ -246,7 +246,7 @@ fn test_callgraph_generates_dot_for_invoke_contract_calls() {
     assert!(dot.contains("digraph ContractCallGraph"));
     assert!(dot.contains("\"Router\" -> \"target\""));
 assert!(dot.contains("fn_name"));
-+}
+}
 /// Verifies that `sanctifier analyze --format json` output conforms to the
 /// published JSON Schema at `schemas/analysis-output.json`.
 #[test]
