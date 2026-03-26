@@ -26,6 +26,8 @@
 use serde::{Deserialize, Serialize};
 use std::panic::catch_unwind;
 
+/// Contract complexity metrics and reports.
+pub mod complexity;
 /// Canonical finding codes (`S000` – `S012`) emitted by every analysis pass.
 pub mod finding_codes;
 /// Gas / instruction-cost estimation heuristics.
@@ -38,8 +40,6 @@ pub mod patcher;
 pub mod rules;
 /// SEP-41 token-interface verification.
 pub mod sep41;
-/// Contract complexity metrics and reports.
-pub mod complexity;
 /// Z3 SMT solver integration for formal verification.
 /// Only available when the `smt` feature is enabled (default).
 #[cfg(feature = "smt")]
@@ -67,9 +67,9 @@ use syn::spanned::Spanned;
 use syn::visit::{self, Visit};
 use syn::{parse_str, Fields, File, Item, Meta, Type};
 
+pub use complexity::{analyze_complexity, analyze_complexity_from_source, render_text_report};
 pub use rules::{Rule, RuleRegistry, RuleViolation, Severity};
 pub use sep41::{Sep41Issue, Sep41IssueKind, Sep41VerificationReport};
-pub use complexity::{analyze_complexity, analyze_complexity_from_source, render_text_report};
 
 // Redundant imports removed
 use crate::rules::arithmetic_overflow::ArithVisitor;
@@ -277,10 +277,9 @@ fn has_attr(attrs: &[syn::Attribute], name: &str) -> bool {
 
 /// Returns `true` when `attrs` contains `#[cfg(test)]`.
 fn is_cfg_test_attrs(attrs: &[syn::Attribute]) -> bool {
-    attrs.iter().any(|a| {
-        a.path().is_ident("cfg")
-            && quote::quote!(#a).to_string().contains("test")
-    })
+    attrs
+        .iter()
+        .any(|a| a.path().is_ident("cfg") && quote::quote!(#a).to_string().contains("test"))
 }
 
 fn is_upgrade_or_admin_fn(name: &str) -> bool {
@@ -1530,8 +1529,10 @@ fn ident_looks_like_client(ident: &str) -> bool {
 }
 
 fn method_looks_read_only(method_name: &str) -> bool {
-    matches!(method_name, "balance" | "paused" | "allowance" | "decimals" | "name" | "symbol")
-        || method_name.starts_with("get_")
+    matches!(
+        method_name,
+        "balance" | "paused" | "allowance" | "decimals" | "name" | "symbol"
+    ) || method_name.starts_with("get_")
         || method_name.starts_with("is_")
         || method_name.starts_with("has_")
 }

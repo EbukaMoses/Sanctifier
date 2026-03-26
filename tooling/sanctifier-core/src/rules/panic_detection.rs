@@ -184,10 +184,9 @@ fn has_test_attr(attrs: &[syn::Attribute]) -> bool {
 
 /// Returns `true` if any attribute is `#[cfg(test)]`.
 fn is_cfg_test_item(attrs: &[syn::Attribute]) -> bool {
-    attrs.iter().any(|a| {
-        a.path().is_ident("cfg")
-            && quote::quote!(#a).to_string().contains("test")
-    })
+    attrs
+        .iter()
+        .any(|a| a.path().is_ident("cfg") && quote::quote!(#a).to_string().contains("test"))
 }
 
 #[cfg(test)]
@@ -239,7 +238,11 @@ mod tests {
             }
         "#;
         let violations = rule.check(source);
-        assert_eq!(violations.len(), 0, "#[cfg(test)] impl block must be skipped");
+        assert_eq!(
+            violations.len(),
+            0,
+            "#[cfg(test)] impl block must be skipped"
+        );
     }
 
     #[test]

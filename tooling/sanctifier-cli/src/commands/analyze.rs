@@ -10,7 +10,10 @@ use sanctifier_core::{Analyzer, ContractCallEdge, SanctifyConfig, SizeWarningLev
 use serde_json;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
 use std::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
 
@@ -106,8 +109,8 @@ pub(crate) struct FileAnalysisResult {
 
 pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
     let mut path = args.path.clone();
-    
-    // Normalize path separators: ensure backslashes provided by users familiar with Windows 
+
+    // Normalize path separators: ensure backslashes provided by users familiar with Windows
     // are converted to forward slashes on Unix systems to allow cross-platform path strings.
     #[cfg(not(windows))]
     {

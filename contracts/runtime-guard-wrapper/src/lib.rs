@@ -155,10 +155,7 @@ impl RuntimeGuardWrapper {
         let expected_arg_count = match Self::expected_arg_count(&env, function_name) {
             Some(count) => count,
             None => {
-                Self::record_guard_failure(
-                    env.clone(),
-                    Symbol::new(&env, "missing_function"),
-                );
+                Self::record_guard_failure(env.clone(), Symbol::new(&env, "missing_function"));
                 return Err(Error::from_contract_error(3));
             }
         };
@@ -199,7 +196,11 @@ impl RuntimeGuardWrapper {
         None
     }
 
-    fn simulate_wrapped_call(env: Env, function_name: &Symbol, args: &Vec<Val>) -> Result<Val, Error> {
+    fn simulate_wrapped_call(
+        env: Env,
+        function_name: &Symbol,
+        args: &Vec<Val>,
+    ) -> Result<Val, Error> {
         let ping = Symbol::new(&env, "ping");
         let echo = Symbol::new(&env, "echo");
         let sum = Symbol::new(&env, "sum");

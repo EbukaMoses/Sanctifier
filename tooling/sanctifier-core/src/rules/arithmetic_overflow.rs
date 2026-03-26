@@ -257,10 +257,9 @@ fn has_test_attr(attrs: &[syn::Attribute]) -> bool {
 
 /// Returns true if the item has a `#[cfg(test)]` attribute.
 fn is_cfg_test(attrs: &[syn::Attribute]) -> bool {
-    attrs.iter().any(|a| {
-        a.path().is_ident("cfg")
-            && quote::quote!(#a).to_string().contains("test")
-    })
+    attrs
+        .iter()
+        .any(|a| a.path().is_ident("cfg") && quote::quote!(#a).to_string().contains("test"))
 }
 
 #[cfg(test)]
@@ -368,7 +367,11 @@ mod tests {
         "#;
         let violations = rule.check(source);
         // Only `mint` should fire (1 finding for `+`), not the cfg(test) helper.
-        assert_eq!(violations.len(), 1, "cfg(test) module arithmetic must be skipped");
+        assert_eq!(
+            violations.len(),
+            1,
+            "cfg(test) module arithmetic must be skipped"
+        );
     }
 
     #[test]
@@ -381,6 +384,10 @@ mod tests {
             }
         "#;
         let violations = rule.check(source);
-        assert_eq!(violations.len(), 0, "index subscript arithmetic must be skipped");
+        assert_eq!(
+            violations.len(),
+            0,
+            "index subscript arithmetic must be skipped"
+        );
     }
 }

@@ -1,7 +1,7 @@
 #![allow(deprecated)]
 use assert_cmd::Command;
-use mockito::Server;
 use jsonschema::JSONSchema;
+use mockito::Server;
 use std::env;
 use std::fs;
 use tempfile::tempdir;
@@ -474,10 +474,10 @@ fn test_analyze_windows_path_separators() {
     // If we ARE normalizing in the CLI, then "tests\\fixtures\\valid_contract.rs" will become "tests/fixtures/valid_contract.rs".
 
     cmd.arg("analyze")
-    .arg(fixture_path)
-    .assert()
-    .success()
-    .stdout(predicates::str::contains("Static analysis complete."));
+        .arg(fixture_path)
+        .assert()
+        .success()
+        .stdout(predicates::str::contains("Static analysis complete."));
 }
 
 #[test]
@@ -501,9 +501,18 @@ fn test_analyze_json_parsable_output() {
     let parsed: serde_json::Value =
         serde_json::from_str(&stdout).expect("JSON output should be valid JSON");
 
-    assert!(parsed["schema_version"].is_string(), "JSON should contain schema_version");
-    assert!(parsed["findings"].is_object(), "JSON should contain findings object");
-    assert!(parsed["metadata"]["project_path"].is_string(), "JSON should contain metadata.project_path");
+    assert!(
+        parsed["schema_version"].is_string(),
+        "JSON should contain schema_version"
+    );
+    assert!(
+        parsed["findings"].is_object(),
+        "JSON should contain findings object"
+    );
+    assert!(
+        parsed["metadata"]["project_path"].is_string(),
+        "JSON should contain metadata.project_path"
+    );
 }
 
 #[test]
@@ -569,13 +578,16 @@ fn test_init_creates_cargo_toml_and_lib_rs() {
     let project_path = temp_dir.path().join("test-contract");
 
     let mut cmd = Command::cargo_bin("sanctifier").unwrap();
-    cmd.arg("init")
-        .arg(&project_path)
-        .assert()
-        .success();
+    cmd.arg("init").arg(&project_path).assert().success();
 
-    assert!(project_path.join("Cargo.toml").exists(), "init should create Cargo.toml");
-    assert!(project_path.join("src/lib.rs").exists(), "init should create src/lib.rs");
+    assert!(
+        project_path.join("Cargo.toml").exists(),
+        "init should create Cargo.toml"
+    );
+    assert!(
+        project_path.join("src/lib.rs").exists(),
+        "init should create src/lib.rs"
+    );
 }
 
 #[test]

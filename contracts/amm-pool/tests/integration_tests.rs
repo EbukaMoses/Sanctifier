@@ -59,7 +59,10 @@ fn add_liquidity_rejects_initial_deposit_below_locked_minimum() {
     let token_a = Address::generate(&env);
     let token_b = Address::generate(&env);
 
-    assert_eq!(client.add_liquidity(&token_a, &token_b, &1_000u128, &1_000u128, &1u128), 0);
+    assert_eq!(
+        client.add_liquidity(&token_a, &token_b, &1_000u128, &1_000u128, &1u128),
+        0
+    );
 }
 
 #[test]
@@ -72,7 +75,10 @@ fn add_liquidity_rejects_zero_amounts() {
     let token_a = Address::generate(&env);
     let token_b = Address::generate(&env);
 
-    assert_eq!(client.add_liquidity(&token_a, &token_b, &0u128, &2_000u128, &1u128), 0);
+    assert_eq!(
+        client.add_liquidity(&token_a, &token_b, &0u128, &2_000u128, &1u128),
+        0
+    );
 }
 
 #[test]

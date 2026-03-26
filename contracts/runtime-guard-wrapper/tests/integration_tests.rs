@@ -3,8 +3,7 @@
 
 use runtime_guard_wrapper::RuntimeGuardWrapper;
 use soroban_sdk::{
-    contract, contractimpl, testutils::Address as _, vec, Address, Env, IntoVal, Symbol, Val,
-    Vec,
+    contract, contractimpl, testutils::Address as _, vec, Address, Env, IntoVal, Symbol, Val, Vec,
 };
 
 #[contract]
@@ -20,7 +19,11 @@ impl RuntimeGuardWrapperHarness {
         RuntimeGuardWrapper::get_wrapped_contract(env)
     }
 
-    pub fn execute_guarded(env: Env, function_name: Symbol, args: Vec<Val>) -> Result<Val, soroban_sdk::Error> {
+    pub fn execute_guarded(
+        env: Env,
+        function_name: Symbol,
+        args: Vec<Val>,
+    ) -> Result<Val, soroban_sdk::Error> {
         RuntimeGuardWrapper::execute_guarded(env, function_name, args)
     }
 

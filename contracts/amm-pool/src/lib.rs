@@ -1,9 +1,7 @@
 #![no_std]
 #![allow(unexpected_cfgs)]
 
-use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, Address, Env,
-};
+use soroban_sdk::{contract, contracterror, contractimpl, contracttype, Address, Env};
 
 const MINIMUM_LIQUIDITY: u128 = 1_000;
 const PRICE_SCALE: u128 = 1_000_000;
@@ -275,11 +273,7 @@ pub fn calculate_liquidity_mint(
     Some(minted)
 }
 
-pub fn calculate_swap_output(
-    reserve_in: u128,
-    reserve_out: u128,
-    amount_in: u128,
-    ) -> Option<u128> {
+pub fn calculate_swap_output(reserve_in: u128, reserve_out: u128, amount_in: u128) -> Option<u128> {
     let numerator = amount_in.checked_mul(reserve_out)?;
     let denominator = reserve_in.checked_add(amount_in)?;
     numerator.checked_div(denominator)
@@ -336,7 +330,9 @@ fn read_pair(env: &Env) -> Option<(Address, Address)> {
 fn write_pool_state(env: &Env, reserve_a: u128, reserve_b: u128, total_supply: u128) {
     env.storage().instance().set(&DataKey::ReserveA, &reserve_a);
     env.storage().instance().set(&DataKey::ReserveB, &reserve_b);
-    env.storage().instance().set(&DataKey::TotalSupply, &total_supply);
+    env.storage()
+        .instance()
+        .set(&DataKey::TotalSupply, &total_supply);
 }
 
 fn read_address(env: &Env, key: DataKey) -> Option<Address> {
@@ -352,7 +348,9 @@ fn read_reserve_b(env: &Env) -> Option<u128> {
 }
 
 fn read_total_supply(env: &Env) -> Option<u128> {
-    env.storage().instance().get::<DataKey, u128>(&DataKey::TotalSupply)
+    env.storage()
+        .instance()
+        .get::<DataKey, u128>(&DataKey::TotalSupply)
 }
 
 fn read_u128(env: &Env, key: DataKey) -> Option<u128> {
