@@ -37,6 +37,54 @@ export interface CustomRuleMatch {
   snippet: string;
 }
 
+export interface StorageCollision {
+  code?: string;
+  key: string;
+  contracts: string[];
+  location: string;
+}
+
+export interface EventIssue {
+  code?: string;
+  event_name: string;
+  issue_type: string;
+  location: string;
+  suggestion?: string;
+}
+
+export interface UnhandledResult {
+  code?: string;
+  function_name: string;
+  call_expr: string;
+  location: string;
+  suggestion?: string;
+}
+
+export interface UpgradeFinding {
+  code?: string;
+  finding_type: string;
+  description: string;
+  location: string;
+  suggestion?: string;
+}
+
+export interface SmtIssue {
+  code?: string;
+  property: string;
+  violation: string;
+  location: string;
+  suggestion?: string;
+}
+
+export interface VulnMatch {
+  code?: string;
+  vuln_id: string;
+  title: string;
+  severity: Severity;
+  location: string;
+  description?: string;
+}
+
 export interface CallGraphReportEdge {
   caller: string;
   callee: string;
@@ -53,6 +101,12 @@ export interface AnalysisReport {
   panic_issues?: PanicIssue[];
   arithmetic_issues?: ArithmeticIssue[];
   custom_rule_matches?: CustomRuleMatch[];
+  storage_collisions?: StorageCollision[];
+  event_issues?: EventIssue[];
+  unhandled_results?: UnhandledResult[];
+  upgrade_reports?: UpgradeFinding[];
+  smt_violations?: SmtIssue[];
+  vuln_matches?: VulnMatch[];
   call_graph?: CallGraphReportEdge[];
 }
 

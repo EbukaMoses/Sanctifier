@@ -3,8 +3,14 @@ import type {
   CallGraphEdge,
   CallGraphNode,
   CallGraphReportEdge,
+  EventIssue,
   Finding,
   Severity,
+  SmtIssue,
+  StorageCollision,
+  UnhandledResult,
+  UpgradeFinding,
+  VulnMatch,
 } from "../types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -58,6 +64,12 @@ export function normalizeReport(input: unknown): AnalysisReport {
     custom_rule_matches: arrayValue(
       findings.custom_rule_matches ?? findings.custom_rules
     ),
+    storage_collisions: arrayValue(findings.storage_collisions),
+    event_issues: arrayValue(findings.event_issues),
+    unhandled_results: arrayValue(findings.unhandled_results),
+    upgrade_reports: arrayValue(findings.upgrade_reports),
+    smt_violations: arrayValue(findings.smt_violations),
+    vuln_matches: arrayValue(findings.vuln_matches),
     call_graph: arrayValue<CallGraphReportEdge>(parsed.call_graph).filter((edge) => {
       return isRecord(edge)
         && typeof edge.caller === "string"
@@ -189,6 +201,96 @@ export function transformReport(report: AnalysisReport): Finding[] {
     );
   });
 
+  (report.storage_collisions ?? []).forEach((s: StorageCollision) => {
+    findings.push(
+      toFinding(
+        `storage-${idx++}`,
+        s.code ?? "S005",
+        "high",
+        "Storage Collision",
+        `Storage key collision on "${s.key}"`,
+        s.location,
+        s,
+        { snippet: `Contracts: ${s.contracts.join(", ")}` }
+      )
+    );
+  });
+
+  (report.event_issues ?? []).forEach((e: EventIssue) => {
+    findings.push(
+      toFinding(
+        `event-${idx++}`,
+        e.code ?? "S008",
+        "medium",
+        "Event Issue",
+        `${e.issue_type} in event "${e.event_name}"`,
+        e.location,
+        e,
+        { suggestion: e.suggestion }
+      )
+    );
+  });
+
+  (report.unhandled_results ?? []).forEach((u: UnhandledResult) => {
+    findings.push(
+      toFinding(
+        `unhandled-${idx++}`,
+        u.code ?? "S009",
+        "medium",
+        "Unhandled Result",
+        `Unhandled result from ${u.call_expr}`,
+        u.location,
+        u,
+        { snippet: u.call_expr, suggestion: u.suggestion }
+      )
+    );
+  });
+
+  (report.upgrade_reports ?? []).forEach((up: UpgradeFinding) => {
+    findings.push(
+      toFinding(
+        `upgrade-${idx++}`,
+        up.code ?? "S010",
+        "high",
+        "Upgrade Issue",
+        up.finding_type,
+        up.location,
+        up,
+        { snippet: up.description, suggestion: up.suggestion }
+      )
+    );
+  });
+
+  (report.smt_violations ?? []).forEach((s: SmtIssue) => {
+    findings.push(
+      toFinding(
+        `smt-${idx++}`,
+        s.code ?? "S011",
+        "critical",
+        "SMT Violation",
+        `Property violation: ${s.property}`,
+        s.location,
+        s,
+        { snippet: s.violation, suggestion: s.suggestion }
+      )
+    );
+  });
+
+  (report.vuln_matches ?? []).forEach((v: VulnMatch) => {
+    findings.push(
+      toFinding(
+        `vuln-${idx++}`,
+        v.code ?? v.vuln_id,
+        v.severity,
+        "Vulnerability Match",
+        v.title,
+        v.location,
+        v,
+        { snippet: v.description }
+      )
+    );
+  });
+
   return findings;
 }
 
@@ -261,6 +363,32 @@ export function extractCallGraph(
         label: a.function_name,
         type: "function",
         severity: "high",
+      });
+    }
+  });
+
+  // Extract storage nodes from storage collisions
+  (report.storage_collisions ?? []).forEach((s) => {
+    const storageId = `storage-${s.key}`;
+    if (!nodeMap.has(storageId)) {
+      nodeMap.set(storageId, {
+        id: storageId,
+        label: `storage:${s.key}`,
+        type: "storage",
+        severity: "high",
+      });
+    }
+  });
+
+  // Extract function nodes from event issues
+  (report.event_issues ?? []).forEach((e) => {
+    const eventId = `fn-event-${e.event_name}`;
+    if (!nodeMap.has(eventId)) {
+      nodeMap.set(eventId, {
+        id: eventId,
+        label: e.event_name,
+        type: "function",
+        severity: "medium",
       });
     }
   });

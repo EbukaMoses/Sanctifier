@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import type { CallGraphNode, CallGraphEdge, Finding, Severity } from "../types";
 import { transformReport, extractCallGraph, normalizeReport } from "../lib/transform";
 import { exportToPdf } from "../lib/export-pdf";
@@ -8,7 +9,16 @@ import { SeverityFilter } from "../components/SeverityFilter";
 import { FindingsList } from "../components/FindingsList";
 import { SummaryChart } from "../components/SummaryChart";
 import { SanctityScore } from "../components/SanctityScore";
-import { CallGraph } from "../components/CallGraph";
+import { ErrorBoundary } from "../components/ErrorBoundary";
+
+const CallGraph = dynamic(() => import("../components/CallGraph").then((m) => m.CallGraph), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 text-center text-zinc-500">
+      Loading call graph…
+    </div>
+  ),
+});
 
 const SAMPLE_JSON = `{
   "size_warnings": [],
@@ -204,8 +214,12 @@ export default function DashboardPage() {
         {hasData && (
           <>
             <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <SanctityScore findings={findings} />
-              <SummaryChart findings={findings} />
+              <ErrorBoundary>
+                <SanctityScore findings={findings} />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <SummaryChart findings={findings} />
+              </ErrorBoundary>
             </section>
 
 {/* Tab navigation */}
@@ -249,14 +263,18 @@ export default function DashboardPage() {
 
           <section id="findings-panel" role="tabpanel" aria-labelledby="findings-tab">
             <h2 className="text-lg font-semibold mb-4">Findings</h2>
-            <FindingsList findings={findings} severityFilter={severityFilter} />
+            <ErrorBoundary>
+              <FindingsList findings={findings} severityFilter={severityFilter} />
+            </ErrorBoundary>
           </section>
         </>
       )}
 
       {activeTab === "callgraph" && (
         <section id="callgraph-panel" role="tabpanel" aria-labelledby="callgraph-tab">
-          <CallGraph nodes={callGraphNodes} edges={callGraphEdges} />
+          <ErrorBoundary>
+            <CallGraph nodes={callGraphNodes} edges={callGraphEdges} />
+          </ErrorBoundary>
         </section>
       )}
           </>
