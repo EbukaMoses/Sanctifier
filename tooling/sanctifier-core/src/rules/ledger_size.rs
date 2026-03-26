@@ -254,3 +254,93 @@ fn has_contracttype(attrs: &[syn::Attribute]) -> bool {
         }
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn flags_struct_that_exceeds_ledger_limit() {
+        let rule = LedgerSizeRule::new().with_limit(50);
+        let source = r#"
+            #[contracttype]
+            pub struct BigEntry {
+                pub data: Bytes,
+            }
+        "#;
+        // Bytes is estimated at 64 bytes; limit is 50 → should flag
+        let violations = rule.check(source);
+        assert!(!violations.is_empty(), "oversized struct should be flagged");
+        assert!(violations[0].message.contains("BigEntry"));
+    }
+
+    #[test]
+    fn no_violation_for_small_struct_within_limit() {
+        let rule = LedgerSizeRule::new().with_limit(64000);
+        let source = r#"
+            #[contracttype]
+            pub struct TinyEntry {
+                pub count: u32,
+            }
+        "#;
+        // u32 is 4 bytes; well within 64 KB limit
+        let violations = rule.check(source);
+        assert!(violations.is_empty(), "small struct must not be flagged");
+    }
+
+    #[test]
+    fn empty_source_produces_no_findings() {
+        let rule = LedgerSizeRule::new();
+        let violations = rule.check("");
+        assert!(
+            violations.is_empty(),
+            "empty source must produce no findings"
+        );
+    }
+
+    #[test]
+    fn struct_without_contracttype_is_not_flagged() {
+        let rule = LedgerSizeRule::new().with_limit(10);
+        let source = r#"
+            pub struct OversizedButNotContractType {
+                pub buffer: Bytes,
+                pub extra: Bytes,
+            }
+        "#;
+        // No #[contracttype] → must not be flagged regardless of size
+        let violations = rule.check(source);
+        assert!(
+            violations.is_empty(),
+            "struct without #[contracttype] must be ignored"
+        );
+    }
+
+    #[test]
+    fn enum_with_contracttype_approaching_limit_flagged() {
+        // Default approaching threshold is 80 % of the limit.
+        // Enum estimated size: 4 (discriminant) + 64 (Bytes) = 68 bytes.
+        // With limit = 80: threshold = 80 * 0.8 = 64 → 68 >= 64 → approaching.
+        let rule = LedgerSizeRule::new().with_limit(80);
+        let source = r#"
+            #[contracttype]
+            pub enum State {
+                Active(Bytes),
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(
+            !violations.is_empty(),
+            "enum approaching limit should be flagged"
+        );
+    }
+
+    #[test]
+    fn invalid_source_produces_no_panic() {
+        let rule = LedgerSizeRule::new();
+        let violations = rule.check("not valid rust }{{{");
+        assert!(
+            violations.is_empty(),
+            "parse error must return empty, not panic"
+        );
+    }
+}

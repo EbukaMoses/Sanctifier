@@ -9,8 +9,8 @@
 //! * [`analyze_with_config`] — run with a JSON-serialised [`SanctifyConfig`].
 
 use sanctifier_core::{
-    finding_codes, Analyzer, ArithmeticIssue, EventIssue, PanicIssue, SanctifyConfig,
-    SizeWarning, StorageCollisionIssue, UnhandledResultIssue, UnsafePattern,
+    finding_codes, Analyzer, ArithmeticIssue, EventIssue, PanicIssue, SanctifyConfig, SizeWarning,
+    StorageCollisionIssue, UnhandledResultIssue, UnsafePattern,
 };
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
@@ -244,8 +244,7 @@ pub fn analyze(source: &str) -> JsValue {
 #[wasm_bindgen]
 pub fn analyze_with_config(config_json: &str, source: &str) -> JsValue {
     set_panic_hook();
-    let config: SanctifyConfig =
-        serde_json::from_str(config_json).unwrap_or_default();
+    let config: SanctifyConfig = serde_json::from_str(config_json).unwrap_or_default();
     let analyzer = Analyzer::new(config);
     let result = run_analysis(&analyzer, source);
     serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
@@ -258,4 +257,10 @@ pub fn analyze_with_config(config_json: &str, source: &str) -> JsValue {
 pub fn finding_codes() -> JsValue {
     let codes = sanctifier_core::finding_codes::all_finding_codes();
     serde_wasm_bindgen::to_value(&codes).unwrap_or(JsValue::NULL)
+}
+
+/// Return the crate version string (e.g. `"0.1.0"`).
+#[wasm_bindgen]
+pub fn version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
 }

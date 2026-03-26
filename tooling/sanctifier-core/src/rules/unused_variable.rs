@@ -158,3 +158,70 @@ impl<'ast> Visit<'ast> for UnusedVariableVisitor {
         visit::visit_expr_path(self, node);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn flags_declared_but_unused_local_variable() {
+        let rule = UnusedVariableRule::new();
+        let source = r#"
+            fn compute() -> u32 {
+                let result = 42;
+                0
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(!violations.is_empty(), "unused local must be flagged");
+        assert!(violations[0].message.contains("result"));
+    }
+
+    #[test]
+    fn no_violation_when_variable_is_used() {
+        let rule = UnusedVariableRule::new();
+        let source = r#"
+            fn compute() -> u32 {
+                let result = 42;
+                result
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(violations.is_empty(), "used variable must not be flagged");
+    }
+
+    #[test]
+    fn empty_source_produces_no_findings() {
+        let rule = UnusedVariableRule::new();
+        let violations = rule.check("");
+        assert!(
+            violations.is_empty(),
+            "empty source must produce no findings"
+        );
+    }
+
+    #[test]
+    fn underscore_prefixed_variable_not_flagged() {
+        let rule = UnusedVariableRule::new();
+        let source = r#"
+            fn compute() {
+                let _ignored = expensive_operation();
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(
+            violations.is_empty(),
+            "underscore-prefixed variable must not be flagged"
+        );
+    }
+
+    #[test]
+    fn invalid_source_produces_no_panic() {
+        let rule = UnusedVariableRule::new();
+        let violations = rule.check("not valid rust }{{{");
+        assert!(
+            violations.is_empty(),
+            "parse error must return empty, not panic"
+        );
+    }
+}

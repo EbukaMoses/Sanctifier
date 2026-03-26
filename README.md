@@ -27,6 +27,7 @@ and optionally proves invariants with Z3.
 - [JSON Schema](#-json-schema)
 - [Project Structure](#-project-structure)
 - [Configuration](#-configuration)
+- [Add a Sanctifier Badge to Your Project](#-add-a-sanctifier-badge-to-your-project)
 - [Documentation](#-documentation)
 - [Contributing](#-contributing)
 - [License](#-license)
@@ -395,6 +396,53 @@ name = "no_mem_forget"
 pattern = "std::mem::forget"
 severity = "warning"
 ```
+
+---
+
+## 🏅 Add a Sanctifier Badge to Your Project
+
+Display your contract's security status directly in your repository README.
+
+### Step 1 — Generate the report and badge
+
+```bash
+# Produce a JSON report
+sanctifier analyze . --format json > sanctifier-report.json
+
+# Generate the SVG badge and a Markdown snippet
+sanctifier badge \
+  --report sanctifier-report.json \
+  --svg-output .github/badges/sanctifier-security.svg \
+  --markdown-output .github/badges/sanctifier-security.md \
+  --badge-url "https://raw.githubusercontent.com/<owner>/<repo>/main/.github/badges/sanctifier-security.svg"
+```
+
+### Step 2 — Commit the badge to your repository
+
+```bash
+git add .github/badges/sanctifier-security.svg
+git commit -m "ci: add Sanctifier security badge"
+```
+
+### Step 3 — Embed the badge in your README
+
+Copy the snippet from `sanctifier-security.md`, or paste directly:
+
+```markdown
+[![Sanctifier: Secure](https://raw.githubusercontent.com/<owner>/<repo>/main/.github/badges/sanctifier-security.svg)](https://github.com/HyperSafeD/Sanctifier)
+```
+
+### What the badge reflects
+
+| Badge color | Status | Meaning |
+|-------------|--------|---------|
+| 🟢 Green | **Secure** | Zero findings |
+| 🟠 Orange | **Warning** | At least one finding (high severity or any finding) |
+| 🔴 Red | **Critical** | At least one critical-severity finding |
+
+The badge is regenerated automatically whenever you re-run `sanctifier badge`
+with an updated report.  Add it to your CI pipeline so the badge always
+reflects the latest scan result.
 
 ---
 

@@ -269,8 +269,99 @@ fn ident_looks_like_client(ident: &str) -> bool {
 }
 
 fn method_looks_read_only(method_name: &str) -> bool {
-    matches!(method_name, "balance" | "paused" | "allowance" | "decimals" | "name" | "symbol")
-        || method_name.starts_with("get_")
+    matches!(
+        method_name,
+        "balance" | "paused" | "allowance" | "decimals" | "name" | "symbol"
+    ) || method_name.starts_with("get_")
         || method_name.starts_with("is_")
         || method_name.starts_with("has_")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn flags_public_fn_with_storage_mutation_and_no_auth() {
+        let rule = AuthGapRule::new();
+        let source = r#"
+            impl MyContract {
+                pub fn set_admin(env: Env, new_admin: Address) {
+                    env.storage().persistent().set(&symbol_short!("admin"), &new_admin);
+                }
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(!violations.is_empty(), "missing auth should be flagged");
+        assert!(violations[0].message.contains("set_admin"));
+    }
+
+    #[test]
+    fn no_violation_when_require_auth_present() {
+        let rule = AuthGapRule::new();
+        let source = r#"
+            impl MyContract {
+                pub fn set_admin(env: Env, new_admin: Address) {
+                    new_admin.require_auth();
+                    env.storage().persistent().set(&symbol_short!("admin"), &new_admin);
+                }
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(
+            violations.is_empty(),
+            "function with require_auth must not be flagged"
+        );
+    }
+
+    #[test]
+    fn empty_source_produces_no_findings() {
+        let rule = AuthGapRule::new();
+        let violations = rule.check("");
+        assert!(
+            violations.is_empty(),
+            "empty source must produce no findings"
+        );
+    }
+
+    #[test]
+    fn reserved_entrypoint_constructor_not_flagged() {
+        let rule = AuthGapRule::new();
+        let source = r#"
+            impl MyContract {
+                pub fn __constructor(env: Env, admin: Address) {
+                    env.storage().instance().set(&symbol_short!("admin"), &admin);
+                }
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(violations.is_empty(), "__constructor must not be flagged");
+    }
+
+    #[test]
+    fn private_function_with_storage_mutation_not_flagged() {
+        let rule = AuthGapRule::new();
+        let source = r#"
+            impl MyContract {
+                fn internal_set(env: &Env, key: Symbol, val: u32) {
+                    env.storage().persistent().set(&key, &val);
+                }
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(
+            violations.is_empty(),
+            "private functions must not be flagged"
+        );
+    }
+
+    #[test]
+    fn invalid_source_produces_no_panic() {
+        let rule = AuthGapRule::new();
+        let violations = rule.check("not valid rust {{{{");
+        assert!(
+            violations.is_empty(),
+            "parse error must return empty, not panic"
+        );
+    }
 }

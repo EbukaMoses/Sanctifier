@@ -291,3 +291,89 @@ impl ResultVisitor {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn flags_unhandled_result_in_public_fn() {
+        let rule = UnhandledResultRule::new();
+        let source = r#"
+            impl Contract {
+                pub fn transfer(env: Env) {
+                    some_fallible_call();
+                }
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(!violations.is_empty(), "unhandled Result must be flagged");
+    }
+
+    #[test]
+    fn no_violation_when_result_is_handled_with_unwrap() {
+        let rule = UnhandledResultRule::new();
+        let source = r#"
+            impl Contract {
+                pub fn transfer(env: Env) {
+                    let _ = some_fallible_call().unwrap();
+                }
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(violations.is_empty(), "handled Result must not be flagged");
+    }
+
+    #[test]
+    fn empty_source_produces_no_findings() {
+        let rule = UnhandledResultRule::new();
+        let violations = rule.check("");
+        assert!(
+            violations.is_empty(),
+            "empty source must produce no findings"
+        );
+    }
+
+    #[test]
+    fn no_violation_when_result_is_propagated_with_question_mark() {
+        let rule = UnhandledResultRule::new();
+        let source = r#"
+            impl Contract {
+                pub fn transfer(env: Env) -> Result<(), Error> {
+                    some_fallible_call()?;
+                    Ok(())
+                }
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(violations.is_empty(), "? propagation must not be flagged");
+    }
+
+    #[test]
+    fn no_violation_for_private_function() {
+        let rule = UnhandledResultRule::new();
+        let source = r#"
+            impl Contract {
+                fn internal(env: Env) {
+                    some_fallible_call();
+                }
+            }
+        "#;
+        // Private functions are not flagged by this rule
+        let violations = rule.check(source);
+        assert!(
+            violations.is_empty(),
+            "private functions must not be flagged"
+        );
+    }
+
+    #[test]
+    fn invalid_source_produces_no_panic() {
+        let rule = UnhandledResultRule::new();
+        let violations = rule.check("not valid rust }{{{");
+        assert!(
+            violations.is_empty(),
+            "parse error must return empty, not panic"
+        );
+    }
+}
