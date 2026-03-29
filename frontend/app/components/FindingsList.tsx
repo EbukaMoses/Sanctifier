@@ -4,6 +4,8 @@ import { useCallback, useMemo, useRef } from "react";
 import { FixedSizeList, type ListChildComponentProps } from "react-window";
 import type { Finding, Severity } from "../types";
 import { CodeSnippet } from "./CodeSnippet";
+import { Sparkles } from "lucide-react";
+import { AiFixPanel } from "./AiFixPanel";
 
 interface FindingsListProps {
   findings: Finding[];
@@ -67,7 +69,7 @@ function FindingCard({ finding }: { finding: Finding }) {
 }
 
 export function FindingsList({ findings, severityFilter }: FindingsListProps) {
-  const listRef = useRef<FixedSizeList>(null);
+
 
   const filtered = useMemo(() => {
     return severityFilter === "all"
@@ -114,20 +116,7 @@ export function FindingsList({ findings, severityFilter }: FindingsListProps) {
   const listHeight = Math.min(filtered.length * ITEM_HEIGHT, MAX_LIST_HEIGHT);
 
   return (
-    <div>
-      <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">
-        Showing {filtered.length.toLocaleString()} findings (virtualised)
-      </p>
-      <FixedSizeList
-        ref={listRef}
-        height={listHeight}
-        itemCount={filtered.length}
-        itemSize={ITEM_HEIGHT}
-        width="100%"
-        overscanCount={5}
-      >
-        {Row}
-      </FixedSizeList>
+
     </div>
   );
 }
