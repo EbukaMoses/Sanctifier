@@ -1,4 +1,5 @@
 use soroban_sdk::Env;
+use std::collections::HashSet;
 use syn::{parse_str, File, Item, Type, Fields, Meta, ExprMethodCall, Macro};
 use syn::visit::{self, Visit};
 use syn::spanned::Spanned;
