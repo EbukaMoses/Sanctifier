@@ -7,6 +7,8 @@
 pub mod arithmetic_overflow;
 /// Missing authorization checks.
 pub mod auth_gap;
+/// Instance storage misuse — per-user data stored in Instance instead of Persistent.
+pub mod instance_storage_misuse;
 /// Ledger entry size analysis.
 pub mod ledger_size;
 /// Missing state event emission.
@@ -25,10 +27,13 @@ pub mod unchecked_external_call;
 pub mod unhandled_result;
 /// Unsafe PRNG usage in state-critical code.
 pub mod unsafe_prng;
-/// Variable shadowing in nested scopes.
-pub mod variable_shadowing;
 /// Unused local variables.
 pub mod unused_variable;
+/// Detect usage of env.storage().instance().update() without state check.
+pub mod storage_update_state_check;
+
+/// Variable shadowing in nested scopes.
+pub mod variable_shadowing;
 use serde::Serialize;
 use std::any::Any;
 
@@ -52,7 +57,7 @@ pub trait Rule: Send + Sync + std::panic::UnwindSafe + std::panic::RefUnwindSafe
 }
 
 /// A source-level text replacement.
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, serde::Deserialize, PartialEq)]
 pub struct Patch {
     /// Start line (1-based).
     pub start_line: usize,
@@ -69,7 +74,7 @@ pub struct Patch {
 }
 
 /// A single violation emitted by a [`Rule`].
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
 pub struct RuleViolation {
     /// Name of the rule that fired.
     pub rule_name: String,
@@ -88,7 +93,7 @@ pub struct RuleViolation {
 }
 
 /// Severity level of a rule violation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, serde::Deserialize)]
 #[non_exhaustive]
 pub enum Severity {
     /// Hard error — blocks CI.
@@ -181,12 +186,14 @@ impl RuleRegistry {
         registry.register(unhandled_result::UnhandledResultRule::new());
         registry.register(unused_variable::UnusedVariableRule::new());
         registry.register(shadow_storage::ShadowStorageRule::new());
+        registry.register(storage_update_state_check::StorageUpdateStateCheckRule::new());
         registry.register(reentrancy::ReentrancyRule::new());
         registry.register(truncation_bounds::TruncationBoundsRule::new());
         registry.register(unsafe_prng::UnsafePrngRule::new());
         registry.register(variable_shadowing::VariableShadowingRule::new());
         registry.register(unchecked_external_call::UncheckedExternalCallRule::new());
         registry.register(missing_state_event::MissingStateEventRule::new());
+        registry.register(instance_storage_misuse::InstanceStorageMisuseRule::new());
         registry
     }
 }
