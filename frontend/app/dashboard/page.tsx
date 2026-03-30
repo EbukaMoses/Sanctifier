@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useTransition, useMemo } from "react";
+import dynamic from "next/dynamic";
 import type { CallGraphNode, CallGraphEdge, Finding, Severity } from "../types";
 import { transformReport, extractCallGraph, normalizeReport } from "../lib/transform";
 import { exportToPdf } from "../lib/export-pdf";
@@ -8,9 +9,16 @@ import { SeverityFilter } from "../components/SeverityFilter";
 import { FindingsList } from "../components/FindingsList";
 import { SummaryChart } from "../components/SummaryChart";
 import { SanctityScore } from "../components/SanctityScore";
-import { CallGraph } from "../components/CallGraph";
-import { ThemeToggle } from "../components/ThemeToggle";
-import Link from "next/link";
+import { ErrorBoundary } from "../components/ErrorBoundary";
+
+const CallGraph = dynamic(() => import("../components/CallGraph").then((m) => m.CallGraph), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 text-center text-zinc-500">
+      Loading call graph…
+    </div>
+  ),
+});
 
 const SAMPLE_JSON = `{
   "size_warnings": [],
@@ -49,13 +57,18 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<Tab>("findings");
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [isUploadingContract, setIsUploadingContract] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const applyReport = useCallback((rawReport: unknown) => {
-    const report = normalizeReport(rawReport);
-    setFindings(transformReport(report));
-    const { nodes, edges } = extractCallGraph(report);
-    setCallGraphNodes(nodes);
-    setCallGraphEdges(edges);
+    startTransition(() => {
+      const report = normalizeReport(rawReport);
+      const transformed = transformReport(report);
+      const graph = extractCallGraph(report);
+
+      setFindings(transformed);
+      setCallGraphNodes(graph.nodes);
+      setCallGraphEdges(graph.edges);
+    });
   }, []);
 
   const parseReport = useCallback((text: string) => {
@@ -137,7 +150,8 @@ export default function DashboardPage() {
     }
   }, [applyReport]);
 
-  const hasData = findings.length > 0;
+  const hasData = findings.length > 0 || callGraphNodes.length > 0 || callGraphEdges.length > 0;
+  const isProcessing = isPending || isUploadingContract;
   const hasLoadedReport = jsonInput.trim().length > 0;
 
   return (
@@ -167,13 +181,22 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-        <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 theme-high-contrast:border-white bg-white dark:bg-zinc-900 theme-high-contrast:bg-black p-6">
-          <h2 className="text-lg font-semibold mb-4 theme-high-contrast:text-yellow-300">Load Analysis Report</h2>
+        <section className="rounded-xl border border-zinc-200 dark:border-zinc-800 theme-high-contrast:border-white bg-white dark:bg-zinc-900 theme-high-contrast:bg-black p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold theme-high-contrast:text-yellow-300">Load Analysis Report</h2>
+            <Link 
+              href="/dashboard/webhooks" 
+              className="flex items-center gap-2 text-xs font-bold text-zinc-500 hover:text-emerald-500 transition-colors bg-zinc-50 dark:bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Manage Webhooks
+            </Link>
+          </div>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 theme-high-contrast:text-white mb-4">
             Paste JSON from <code className="bg-zinc-100 dark:bg-zinc-800 theme-high-contrast:bg-zinc-900 px-1 rounded">sanctifier analyze --format json</code>, upload an existing report, or analyze a Rust contract source file.
           </p>
           <div className="flex flex-wrap gap-2 sm:gap-4">
-            <label className="flex-1 sm:flex-none text-center cursor-pointer rounded-lg border border-zinc-300 dark:border-zinc-600 theme-high-contrast:border-white px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 theme-high-contrast:hover:bg-zinc-900">
+            <label className="flex-1 sm:flex-none text-center cursor-pointer rounded-lg border border-zinc-300 dark:border-zinc-600 theme-high-contrast:border-white px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 theme-high-contrast:hover:bg-zinc-900 focus-within:outline-none focus-within:ring-2 focus-within:ring-zinc-400 focus-within:ring-offset-2">
               Upload JSON
               <input
                 type="file"
@@ -184,8 +207,8 @@ export default function DashboardPage() {
                 onChange={handleFileUpload}
               />
             </label>
-            <label className="flex-1 sm:flex-none text-center cursor-pointer rounded-lg border border-zinc-300 dark:border-zinc-600 theme-high-contrast:border-white px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 theme-high-contrast:hover:bg-zinc-900">
-              {isUploadingContract ? "Analyzing Contract..." : "Upload Contract"}
+            <label className="flex-1 sm:flex-none text-center cursor-pointer rounded-lg border border-zinc-300 dark:border-zinc-600 theme-high-contrast:border-white px-4 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 theme-high-contrast:hover:bg-zinc-900 focus-within:outline-none focus-within:ring-2 focus-within:ring-zinc-400 focus-within:ring-offset-2">
+              {isProcessing ? "Processing..." : "Upload Contract"}
               <input
                 type="file"
                 accept=".rs"
@@ -197,7 +220,7 @@ export default function DashboardPage() {
             </label>
             <button
               onClick={loadReport}
-              className="flex-1 sm:flex-none rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 theme-high-contrast:bg-white theme-high-contrast:text-black px-4 py-2 text-sm font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 theme-high-contrast:hover:bg-zinc-300"
+              className="flex-1 sm:flex-none rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 theme-high-contrast:bg-white theme-high-contrast:text-black px-4 py-2 text-sm font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 theme-high-contrast:hover:bg-zinc-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2"
             >
               Parse JSON
             </button>
@@ -206,7 +229,7 @@ export default function DashboardPage() {
                 exportToPdf(findings);
               }}
               disabled={!hasData}
-              className="flex-1 sm:flex-none rounded-lg border border-zinc-300 dark:border-zinc-600 theme-high-contrast:border-white px-4 py-2 text-sm disabled:opacity-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 theme-high-contrast:hover:bg-zinc-900"
+              className="flex-1 sm:flex-none rounded-lg border border-zinc-300 dark:border-zinc-600 theme-high-contrast:border-white px-4 py-2 text-sm disabled:opacity-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 theme-high-contrast:hover:bg-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 disabled:focus-visible:ring-0"
             >
               Export PDF
             </button>
@@ -223,22 +246,31 @@ export default function DashboardPage() {
             value={jsonInput}
             onChange={(e) => setJsonInput(e.target.value)}
             placeholder={SAMPLE_JSON}
-            className="mt-4 w-full h-32 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 p-3 font-mono text-sm focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600 outline-none"
+            disabled={isProcessing}
+            className="mt-4 w-full h-32 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-950 p-3 font-mono text-sm focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-600 outline-none disabled:opacity-50"
           />
         </section>
 
         {hasData && (
           <>
             <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <SanctityScore findings={findings} />
-              <SummaryChart findings={findings} />
+              <ErrorBoundary>
+                <SanctityScore findings={findings} />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <SummaryChart findings={findings} />
+              </ErrorBoundary>
             </section>
 
             {/* Tab navigation */}
-            <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-700 theme-high-contrast:border-white">
+            <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-700 theme-high-contrast:border-white" role="tablist" aria-label="Analysis view tabs">
               <button
                 onClick={() => setActiveTab("findings")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "findings"
+                role="tab"
+                aria-selected={activeTab === "findings"}
+                aria-controls="findings-panel"
+                id="findings-tab"
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-400 ${activeTab === "findings"
                     ? "border-zinc-900 dark:border-zinc-100 theme-high-contrast:border-yellow-300 text-zinc-900 dark:text-zinc-100 theme-high-contrast:text-yellow-300"
                     : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 theme-high-contrast:text-white theme-high-contrast:hover:text-yellow-300"
                   }`}
@@ -247,7 +279,11 @@ export default function DashboardPage() {
               </button>
               <button
                 onClick={() => setActiveTab("callgraph")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "callgraph"
+                role="tab"
+                aria-selected={activeTab === "callgraph"}
+                aria-controls="callgraph-panel"
+                id="callgraph-tab"
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zinc-400 ${activeTab === "callgraph"
                     ? "border-zinc-900 dark:border-zinc-100 theme-high-contrast:border-yellow-300 text-zinc-900 dark:text-zinc-100 theme-high-contrast:text-yellow-300"
                     : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 theme-high-contrast:text-white theme-high-contrast:hover:text-yellow-300"
                   }`}
@@ -263,16 +299,20 @@ export default function DashboardPage() {
                   <SeverityFilter selected={severityFilter} onChange={setSeverityFilter} />
                 </section>
 
-                <section>
+                <section id="findings-panel" role="tabpanel" aria-labelledby="findings-tab">
                   <h2 className="text-lg font-semibold mb-4">Findings</h2>
-                  <FindingsList findings={findings} severityFilter={severityFilter} />
+                  <ErrorBoundary>
+                    <FindingsList findings={findings} severityFilter={severityFilter} />
+                  </ErrorBoundary>
                 </section>
               </>
             )}
 
             {activeTab === "callgraph" && (
-              <section>
-                <CallGraph nodes={callGraphNodes} edges={callGraphEdges} />
+              <section id="callgraph-panel" role="tabpanel" aria-labelledby="callgraph-tab">
+                <ErrorBoundary>
+                  <CallGraph nodes={callGraphNodes} edges={callGraphEdges} />
+                </ErrorBoundary>
               </section>
             )}
           </>

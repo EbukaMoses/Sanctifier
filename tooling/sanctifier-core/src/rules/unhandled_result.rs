@@ -3,9 +3,11 @@ use syn::spanned::Spanned;
 use syn::visit::Visit;
 use syn::{parse_str, File, Type};
 
+/// Rule that flags `Result` values that are silently discarded.
 pub struct UnhandledResultRule;
 
 impl UnhandledResultRule {
+    /// Create a new instance.
     pub fn new() -> Self {
         Self
     }
@@ -113,6 +115,11 @@ impl ResultVisitor {
                         | "or_else"
                         | "unwrap_unchecked"
                         | "expect_unchecked"
+                        | "as_ref"
+                        | "as_mut"
+                        | "clone"
+                        | "inspect"
+                        | "inspect_err"
                 )
             }
             syn::Expr::Assign(a) => Self::is_handled(&a.right),
@@ -126,6 +133,7 @@ impl ResultVisitor {
                 }
                 false
             }
+            syn::Expr::Block(_) => true,
             _ => false,
         }
     }
@@ -134,7 +142,28 @@ impl ResultVisitor {
         if let syn::Expr::Path(p) = &*call.func {
             if let Some(seg) = p.path.segments.last() {
                 let name = seg.ident.to_string();
-                return !matches!(name.as_str(), "Ok" | "Err" | "Some" | "None" | "panic");
+                if matches!(name.as_str(), "Ok" | "Err" | "Some" | "None" | "panic") {
+                    return false;
+                }
+                if matches!(
+                    name.as_str(),
+                    "assert"
+                        | "assert_eq"
+                        | "assert_ne"
+                        | "debug_assert"
+                        | "debug_assert_eq"
+                        | "debug_assert_ne"
+                        | "println"
+                        | "print"
+                        | "eprintln"
+                        | "eprint"
+                        | "format"
+                        | "vec"
+                        | "panic"
+                ) {
+                    return false;
+                }
+                return true;
             }
         }
         false
@@ -260,5 +289,91 @@ impl ResultVisitor {
         for stmt in &block.stmts {
             self.check_statement(stmt, fn_returns_result);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn flags_unhandled_result_in_public_fn() {
+        let rule = UnhandledResultRule::new();
+        let source = r#"
+            impl Contract {
+                pub fn transfer(env: Env) {
+                    some_fallible_call();
+                }
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(!violations.is_empty(), "unhandled Result must be flagged");
+    }
+
+    #[test]
+    fn no_violation_when_result_is_handled_with_unwrap() {
+        let rule = UnhandledResultRule::new();
+        let source = r#"
+            impl Contract {
+                pub fn transfer(env: Env) {
+                    let _ = some_fallible_call().unwrap();
+                }
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(violations.is_empty(), "handled Result must not be flagged");
+    }
+
+    #[test]
+    fn empty_source_produces_no_findings() {
+        let rule = UnhandledResultRule::new();
+        let violations = rule.check("");
+        assert!(
+            violations.is_empty(),
+            "empty source must produce no findings"
+        );
+    }
+
+    #[test]
+    fn no_violation_when_result_is_propagated_with_question_mark() {
+        let rule = UnhandledResultRule::new();
+        let source = r#"
+            impl Contract {
+                pub fn transfer(env: Env) -> Result<(), Error> {
+                    some_fallible_call()?;
+                    Ok(())
+                }
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(violations.is_empty(), "? propagation must not be flagged");
+    }
+
+    #[test]
+    fn no_violation_for_private_function() {
+        let rule = UnhandledResultRule::new();
+        let source = r#"
+            impl Contract {
+                fn internal(env: Env) {
+                    some_fallible_call();
+                }
+            }
+        "#;
+        // Private functions are not flagged by this rule
+        let violations = rule.check(source);
+        assert!(
+            violations.is_empty(),
+            "private functions must not be flagged"
+        );
+    }
+
+    #[test]
+    fn invalid_source_produces_no_panic() {
+        let rule = UnhandledResultRule::new();
+        let violations = rule.check("not valid rust }{{{");
+        assert!(
+            violations.is_empty(),
+            "parse error must return empty, not panic"
+        );
     }
 }
