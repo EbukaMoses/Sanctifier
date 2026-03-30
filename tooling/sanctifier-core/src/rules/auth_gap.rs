@@ -2,6 +2,7 @@ use crate::rules::{Patch, Rule, RuleViolation, Severity};
 use syn::spanned::Spanned;
 use syn::{parse_str, File, Item};
 
+/// Rule that flags public functions modifying state without auth.
 pub struct AuthGapRule;
 
 #[derive(Default)]
@@ -17,7 +18,12 @@ impl FunctionSecuritySummary {
     }
 }
 
+fn is_reserved_soroban_entrypoint(fn_name: &str) -> bool {
+    matches!(fn_name, "__constructor" | "__check_auth")
+}
+
 impl AuthGapRule {
+    /// Create a new instance.
     pub fn new() -> Self {
         Self
     }
@@ -51,6 +57,9 @@ impl Rule for AuthGapRule {
                     if let syn::ImplItem::Fn(f) = impl_item {
                         if let syn::Visibility::Public(_) = f.vis {
                             let fn_name = f.sig.ident.to_string();
+                            if is_reserved_soroban_entrypoint(&fn_name) {
+                                continue;
+                            }
                             let mut summary = FunctionSecuritySummary::default();
                             check_fn_body(&f.block, &mut summary);
                             if summary.has_sensitive_action() && !summary.has_auth {
@@ -81,6 +90,9 @@ impl Rule for AuthGapRule {
                 for impl_item in &i.items {
                     if let syn::ImplItem::Fn(f) = impl_item {
                         if let syn::Visibility::Public(_) = f.vis {
+                            if is_reserved_soroban_entrypoint(&f.sig.ident.to_string()) {
+                                continue;
+                            }
                             let mut summary = FunctionSecuritySummary::default();
                             check_fn_body(&f.block, &mut summary);
                             if summary.has_sensitive_action() && !summary.has_auth {
@@ -165,7 +177,12 @@ fn check_expr(expr: &syn::Expr, summary: &mut FunctionSecuritySummary) {
         }
         syn::Expr::MethodCall(m) => {
             let method_name = m.method.to_string();
-            if method_name == "set" || method_name == "update" || method_name == "remove" {
+            if method_name == "set"
+                || method_name == "update"
+                || method_name == "remove"
+                || method_name == "extend_ttl"
+            // Soroban v21: TTL extension counts as storage mutation
+            {
                 let receiver_str = quote::quote!(#m.receiver).to_string();
                 if receiver_str.contains("storage")
                     || receiver_str.contains("persistent")
@@ -210,6 +227,7 @@ fn is_external_contract_method_call(method_call: &syn::ExprMethodCall) -> bool {
     }
 
     receiver_looks_like_external_client(&method_call.receiver)
+        && !method_looks_read_only(&method_call.method.to_string())
 }
 
 fn receiver_looks_like_external_client(expr: &syn::Expr) -> bool {
@@ -253,4 +271,102 @@ fn path_looks_like_client_constructor(path: &syn::Path) -> bool {
 fn ident_looks_like_client(ident: &str) -> bool {
     let lower = ident.to_lowercase();
     lower.ends_with("client") || lower.ends_with("_client")
+}
+
+fn method_looks_read_only(method_name: &str) -> bool {
+    matches!(
+        method_name,
+        "balance" | "paused" | "allowance" | "decimals" | "name" | "symbol"
+    ) || method_name.starts_with("get_")
+        || method_name.starts_with("is_")
+        || method_name.starts_with("has_")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn flags_public_fn_with_storage_mutation_and_no_auth() {
+        let rule = AuthGapRule::new();
+        let source = r#"
+            impl MyContract {
+                pub fn set_admin(env: Env, new_admin: Address) {
+                    env.storage().persistent().set(&symbol_short!("admin"), &new_admin);
+                }
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(!violations.is_empty(), "missing auth should be flagged");
+        assert!(violations[0].message.contains("set_admin"));
+    }
+
+    #[test]
+    fn no_violation_when_require_auth_present() {
+        let rule = AuthGapRule::new();
+        let source = r#"
+            impl MyContract {
+                pub fn set_admin(env: Env, new_admin: Address) {
+                    new_admin.require_auth();
+                    env.storage().persistent().set(&symbol_short!("admin"), &new_admin);
+                }
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(
+            violations.is_empty(),
+            "function with require_auth must not be flagged"
+        );
+    }
+
+    #[test]
+    fn empty_source_produces_no_findings() {
+        let rule = AuthGapRule::new();
+        let violations = rule.check("");
+        assert!(
+            violations.is_empty(),
+            "empty source must produce no findings"
+        );
+    }
+
+    #[test]
+    fn reserved_entrypoint_constructor_not_flagged() {
+        let rule = AuthGapRule::new();
+        let source = r#"
+            impl MyContract {
+                pub fn __constructor(env: Env, admin: Address) {
+                    env.storage().instance().set(&symbol_short!("admin"), &admin);
+                }
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(violations.is_empty(), "__constructor must not be flagged");
+    }
+
+    #[test]
+    fn private_function_with_storage_mutation_not_flagged() {
+        let rule = AuthGapRule::new();
+        let source = r#"
+            impl MyContract {
+                fn internal_set(env: &Env, key: Symbol, val: u32) {
+                    env.storage().persistent().set(&key, &val);
+                }
+            }
+        "#;
+        let violations = rule.check(source);
+        assert!(
+            violations.is_empty(),
+            "private functions must not be flagged"
+        );
+    }
+
+    #[test]
+    fn invalid_source_produces_no_panic() {
+        let rule = AuthGapRule::new();
+        let violations = rule.check("not valid rust {{{{");
+        assert!(
+            violations.is_empty(),
+            "parse error must return empty, not panic"
+        );
+    }
 }

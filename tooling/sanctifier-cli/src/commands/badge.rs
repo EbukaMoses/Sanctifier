@@ -225,4 +225,84 @@ mod tests {
         assert!(svg.contains("Secure"));
         assert!(md.contains("https://example.com/sanctifier-security.svg"));
     }
+
+    // ── Integration tests: SVG structure and score-to-color mapping ───────────
+
+    #[test]
+    fn svg_output_is_valid_svg_element() {
+        // Verify the generated badge is a well-formed SVG (starts/ends correctly
+        // and contains the mandatory structural elements).
+        let svg = generate_badge_svg("Sanctifier", "Secure", "#2ea043");
+        assert!(svg.starts_with("<svg "), "badge must open with <svg");
+        assert!(svg.ends_with("</svg>"), "badge must close with </svg>");
+        assert!(
+            svg.contains("xmlns=\"http://www.w3.org/2000/svg\""),
+            "must have SVG namespace"
+        );
+        assert!(svg.contains("<clipPath"), "must contain clipPath element");
+        assert!(
+            svg.contains("<linearGradient"),
+            "must contain linearGradient element"
+        );
+        assert!(svg.contains("role=\"img\""), "must have accessibility role");
+    }
+
+    #[test]
+    fn badge_color_is_green_for_secure_report() {
+        let summary = AnalyzeSummary {
+            total_findings: 0,
+            has_critical: false,
+            has_high: false,
+        };
+        let status = derive_status(&summary);
+        assert_eq!(status.color(), "#2ea043", "secure badge must be green");
+    }
+
+    #[test]
+    fn badge_color_is_orange_for_warning_report() {
+        let summary = AnalyzeSummary {
+            total_findings: 3,
+            has_critical: false,
+            has_high: true,
+        };
+        let status = derive_status(&summary);
+        assert_eq!(status.color(), "#fb8c00", "warning badge must be orange");
+    }
+
+    #[test]
+    fn badge_color_is_red_for_critical_report() {
+        let summary = AnalyzeSummary {
+            total_findings: 5,
+            has_critical: true,
+            has_high: true,
+        };
+        let status = derive_status(&summary);
+        assert_eq!(status.color(), "#d73a49", "critical badge must be red");
+    }
+
+    #[test]
+    fn svg_contains_status_color_matching_security_score() {
+        // End-to-end: the SVG written to disk must embed the correct color.
+        let tmp = TempDir::new().expect("temp dir");
+        let report_path = tmp.path().join("report.json");
+        let svg_path = tmp.path().join("badge.svg");
+
+        let report = r#"{"summary":{"total_findings":2,"has_critical":false,"has_high":true}}"#;
+        fs::write(&report_path, report).unwrap();
+
+        exec(BadgeArgs {
+            report: report_path,
+            svg_output: svg_path.clone(),
+            markdown_output: None,
+            badge_url: None,
+        })
+        .expect("exec should succeed");
+
+        let svg = fs::read_to_string(svg_path).unwrap();
+        // has_high = true → Warning → orange
+        assert!(
+            svg.contains("#fb8c00"),
+            "SVG must contain orange color for warning score"
+        );
+    }
 }

@@ -1,28 +1,86 @@
-use serde::Serialize;
+//! Canonical finding codes emitted by Sanctifier analysis passes.
+//!
+//! Each constant (`S000` – `S016`) maps to a single diagnostic category.
+//! Call `all_finding_codes()` to retrieve the full catalogue at runtime.
 
+use serde::{Deserialize, Serialize};
+
+/// Severity level for findings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum FindingSeverity {
+    /// Critical severity - immediate security risk
+    Critical,
+    /// High severity - significant security concern
+    High,
+    /// Medium severity - potential issue
+    #[default]
+    Medium,
+    /// Low severity - minor concern
+    Low,
+    /// Informational - no immediate risk
+    Info,
+}
+
+/// Analysis timed out for a file (see `--timeout`).
+pub const ANALYSIS_TIMEOUT: &str = "S000";
+/// Missing authentication guard in a privileged function.
 pub const AUTH_GAP: &str = "S001";
+/// `panic!` / `unwrap` / `expect` usage that may abort.
 pub const PANIC_USAGE: &str = "S002";
+/// Unchecked arithmetic with overflow / underflow risk.
 pub const ARITHMETIC_OVERFLOW: &str = "S003";
+/// Ledger entry size exceeds or approaches the configured limit.
 pub const LEDGER_SIZE_RISK: &str = "S004";
+/// Potential storage-key collision across data paths.
 pub const STORAGE_COLLISION: &str = "S005";
+/// Potentially unsafe language / runtime pattern.
 pub const UNSAFE_PATTERN: &str = "S006";
+/// User-defined custom rule matched contract source.
 pub const CUSTOM_RULE_MATCH: &str = "S007";
+/// Inconsistent topic counts or sub-optimal gas patterns in events.
 pub const EVENT_INCONSISTENCY: &str = "S008";
+/// A `Result` return value is not consumed or handled.
 pub const UNHANDLED_RESULT: &str = "S009";
+/// Potential security risk in contract upgrade / admin mechanisms.
 pub const UPGRADE_RISK: &str = "S010";
+/// Z3 proved a mathematical invariant violation.
 pub const SMT_INVARIANT_VIOLATION: &str = "S011";
+/// SEP-41 token interface deviation.
 pub const SEP41_INTERFACE_DEVIATION: &str = "S012";
-pub const INSTANCE_STORAGE_LARGE_DATA: &str = "S013";
+/// Reentrancy vulnerability detected (state mutation before external call without guard).
+pub const REENTRANCY: &str = "S013";
+/// Potential administrative centralisation or insecure override.
+pub const ADMIN_TRUST_RISK: &str = "S014";
+/// Hardcoded secret key or sensitive mnemonic in contract source.
+pub const HARDCODED_SECRET_KEY: &str = "S015";
+/// Integer truncation (cast) or unchecked slice/array indexing.
+pub const TRUNCATION_BOUNDS: &str = "S016";
+/// contractimport signature does not match actual implemented workspace source.
+pub const CONTRACTIMPORT_MISMATCH: &str = "S017";
+/// Use of PRNG without proper seeding in state-critical code.
+pub const UNSAFE_PRNG: &str = "S017";
 
+/// A single finding-code entry with machine-readable code, category, and
+/// human-readable description.
 #[derive(Debug, Clone, Serialize)]
+#[non_exhaustive]
 pub struct FindingCode {
+    /// Short code such as `"S001"`.
     pub code: &'static str,
+    /// Broad category (e.g. `"authentication"`).
     pub category: &'static str,
+    /// One-line description of the finding.
     pub description: &'static str,
 }
 
+/// Returns every finding code known to this version of Sanctifier.
 pub fn all_finding_codes() -> Vec<FindingCode> {
     vec![
+        FindingCode {
+            code: ANALYSIS_TIMEOUT,
+            category: "timeout",
+            description: "Analysis of a file was aborted because it exceeded the per-file timeout",
+        },
         FindingCode {
             code: AUTH_GAP,
             category: "authentication",
@@ -84,9 +142,32 @@ pub fn all_finding_codes() -> Vec<FindingCode> {
             description: "SEP-41 token interface compatibility or authorization deviation",
         },
         FindingCode {
-            code: INSTANCE_STORAGE_LARGE_DATA,
-            category: "storage_limits",
-            description: "Large or per-user data stored in instance storage instead of persistent/temporary",
+            code: REENTRANCY,
+            category: "reentrancy",
+            description: "State mutation before external call without a reentrancy guard",
+        },
+        FindingCode {
+            code: ADMIN_TRUST_RISK,
+            category: "centralization",
+            description: "Excessive administrative control or insecure credential management",
+        },
+        FindingCode {
+            code: HARDCODED_SECRET_KEY,
+            category: "secrets",
+            description: "Hardcoded secret key or sensitive mnemonic in contract source",
+        },
+        FindingCode {
+            code: TRUNCATION_BOUNDS,
+            category: "truncation_bounds",
+            description: "Integer truncation cast or unchecked array/slice indexing",
+        },
+        FindingCode {
+            code: CONTRACTIMPORT_MISMATCH,
+            category: "integration",
+            description: "contractimport signature does not match actual implemented workspace source",
+            code: UNSAFE_PRNG,
+            category: "randomness",
+            description: "Use of PRNG without proper seeding in state-critical code that could lead to predictable randomness",
         },
     ]
 }
@@ -113,7 +194,11 @@ mod tests {
         assert!(codes.iter().any(|c| c.code == STORAGE_COLLISION));
         assert!(codes.iter().any(|c| c.code == UNSAFE_PATTERN));
         assert!(codes.iter().any(|c| c.code == CUSTOM_RULE_MATCH));
+        assert!(codes.iter().any(|c| c.code == EVENT_INCONSISTENCY));
         assert!(codes.iter().any(|c| c.code == SEP41_INTERFACE_DEVIATION));
-        assert!(codes.iter().any(|c| c.code == INSTANCE_STORAGE_LARGE_DATA));
+        assert!(codes.iter().any(|c| c.code == HARDCODED_SECRET_KEY));
+        assert!(codes.iter().any(|c| c.code == TRUNCATION_BOUNDS));
+        assert!(codes.iter().any(|c| c.code == CONTRACTIMPORT_MISMATCH));
+        assert!(codes.iter().any(|c| c.code == UNSAFE_PRNG));
     }
 }
