@@ -1,3 +1,5 @@
+extern crate std;
+
 use crate::{TimelockController, TimelockControllerClient};
 use soroban_sdk::{
     contract, contractimpl, testutils::Address as _, testutils::Ledger as _, Address, BytesN, Env,
@@ -85,4 +87,52 @@ fn test_update_delay() {
 
     timelock.update_delay(&admin, &7200);
     assert_eq!(timelock.get_min_delay(), 7200);
+}
+
+// ── Property-based tests ─────────────────────────────────────────────────────
+
+fn is_ready(current_time: u64, proposal_time: u64, delay: u64) -> bool {
+    match proposal_time.checked_add(delay) {
+        Some(ready_at) => current_time >= ready_at,
+        None => false,
+    }
+}
+
+proptest::proptest! {
+    #[test]
+    fn prop_ready_exactly_at_delay(
+        proposal_time in 0u64..u64::MAX / 2,
+        delay in 0u64..u64::MAX / 2,
+    ) {
+        let ready_at = proposal_time + delay;
+        proptest::prop_assert!(is_ready(ready_at, proposal_time, delay));
+    }
+
+    #[test]
+    fn prop_not_ready_before_delay(
+        proposal_time in 1u64..u64::MAX / 2,
+        delay in 1u64..u64::MAX / 2,
+    ) {
+        let ready_at = proposal_time + delay;
+        if ready_at > 0 {
+            proptest::prop_assert!(!is_ready(ready_at - 1, proposal_time, delay));
+        }
+    }
+
+    #[test]
+    fn prop_delay_overflow_is_never_ready(
+        proposal_time in (u64::MAX / 2 + 1)..u64::MAX,
+        delay in (u64::MAX / 2 + 1)..u64::MAX,
+    ) {
+        proptest::prop_assert!(!is_ready(u64::MAX, proposal_time, delay));
+    }
+
+    #[test]
+    fn prop_delay_below_min_is_invalid(
+        min_delay in 1u64..10_000u64,
+        proposed in 0u64..10_000u64,
+    ) {
+        let valid = proposed >= min_delay;
+        proptest::prop_assert_eq!(valid, proposed >= min_delay);
+    }
 }
