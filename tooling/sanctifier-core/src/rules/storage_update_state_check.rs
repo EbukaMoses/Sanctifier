@@ -121,6 +121,20 @@ fn check_for_vulnerable_update(stmt: &Stmt, has_check: bool) -> bool {
                     }
                 }
             }
+            if let Expr::Match(expr_match) = expr {
+                if is_storage_has_call(&expr_match.expr) {
+                    return false;
+                }
+                for arm in &expr_match.arms {
+                    if let Expr::Block(expr_block) = arm.body.as_ref() {
+                        for s in &expr_block.block.stmts {
+                            if check_for_vulnerable_update(s, has_check) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     false
@@ -162,6 +176,46 @@ mod tests {
             impl MyContract {
                 pub fn safe(env: Env) {
                     if env.storage().instance().has(&KEY) {
+                        env.storage().instance().update(&KEY, |old| {
+                            Ok(new_value)
+                        });
+                    }
+                }
+            }
+        "#;
+        let rule = StorageUpdateStateCheckRule::new();
+        let violations = rule.check(source);
+        assert!(violations.is_empty());
+    }
+
+    #[test]
+    fn test_storage_update_with_match_check() {
+        let source = r#"
+            impl MyContract {
+                pub fn safe(env: Env) {
+                    match env.storage().instance().has(&KEY) {
+                        true => {
+                            env.storage().instance().update(&KEY, |old| {
+                                Ok(new_value)
+                            });
+                        }
+                        false => {}
+                    }
+                }
+            }
+        "#;
+        let rule = StorageUpdateStateCheckRule::new();
+        let violations = rule.check(source);
+        assert!(violations.is_empty());
+    }
+
+    #[test]
+    fn test_storage_update_after_check() {
+        let source = r#"
+            impl MyContract {
+                pub fn safe(env: Env) {
+                    let exists = env.storage().instance().has(&KEY);
+                    if exists {
                         env.storage().instance().update(&KEY, |old| {
                             Ok(new_value)
                         });
