@@ -50,6 +50,9 @@ fn test_analyze_vulnerable_contract() {
         .stdout(predicates::str::contains("Found explicit Panics/Unwraps!"))
         .stdout(predicates::str::contains(
             "Found unchecked Arithmetic Operations!",
+        ))
+        .stdout(predicates::str::contains(
+            "Instance storage may be hosting large / per-user data!",
         ));
 }
 
@@ -71,6 +74,42 @@ fn test_analyze_json_output() {
 
     // JSON starts with {
     assert.stdout(predicates::str::starts_with("{"));
+}
+
+#[test]
+fn test_analyze_instance_storage_large_data() {
+    let mut cmd = Command::cargo_bin("sanctifier").unwrap();
+    let fixture_path = env::current_dir()
+        .unwrap()
+        .join("tests/fixtures/instance_storage_contract.rs");
+
+    cmd.arg("analyze")
+        .arg(fixture_path)
+        .env_remove("RUST_LOG")
+        .assert()
+        .success()
+        .stdout(predicates::str::contains(
+            "Instance storage may be hosting large / per-user data!",
+        ));
+}
+
+#[test]
+fn test_analyze_instance_storage_json_output() {
+    let mut cmd = Command::cargo_bin("sanctifier").unwrap();
+    let fixture_path = env::current_dir()
+        .unwrap()
+        .join("tests/fixtures/instance_storage_contract.rs");
+
+    let assert = cmd
+        .arg("analyze")
+        .arg(fixture_path)
+        .arg("--format")
+        .arg("json")
+        .env_remove("RUST_LOG")
+        .assert()
+        .success();
+
+    assert.stdout(predicates::str::contains("instance_storage_risks"));
 }
 
 #[test]

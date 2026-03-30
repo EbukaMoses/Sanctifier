@@ -184,9 +184,7 @@ fn value_looks_like_large_payload(val: &Expr) -> bool {
         }
     }
     let lc = compact.to_lowercase();
-    lc.contains("profile")
-        || lc.contains("userledger")
-        || lc.contains("userdata")
+    lc.contains("profile") || lc.contains("userledger") || lc.contains("userdata")
 }
 
 /// Small configuration / token values typically kept in instance storage — skip those.
@@ -203,7 +201,10 @@ fn benign_instance_value(val: &Expr) -> bool {
                 ) {
                     return true;
                 }
-                if matches!(id.as_str(), "i128" | "u32" | "u64" | "i64" | "bool" | "u128") {
+                if matches!(
+                    id.as_str(),
+                    "i128" | "u32" | "u64" | "i64" | "bool" | "u128"
+                ) {
                     return true;
                 }
             }

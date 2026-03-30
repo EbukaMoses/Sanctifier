@@ -40,6 +40,12 @@ struct KeyInfo {
     line: usize,
 }
 
+impl Default for StorageVisitor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StorageVisitor {
     pub fn new() -> Self {
         Self {

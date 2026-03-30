@@ -15,11 +15,10 @@ impl Default for PanicDetectionRule {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct PanicIssue {
-    pub function_name: String,
-    pub issue_type: String,
-    pub location: String,
+// Internal-only helper; the public PanicIssue lives in crate root (lib.rs).
+struct LocalPanicIssue {
+    issue_type: String,
+    location: String,
 }
 
 impl Rule for PanicDetectionRule {
@@ -72,7 +71,7 @@ impl Rule for PanicDetectionRule {
     }
 }
 
-fn check_fn_panics(block: &syn::Block, fn_name: &str, issues: &mut Vec<PanicIssue>) {
+fn check_fn_panics(block: &syn::Block, fn_name: &str, issues: &mut Vec<LocalPanicIssue>) {
     for stmt in &block.stmts {
         match stmt {
             syn::Stmt::Expr(expr, _) => check_expr_panics(expr, fn_name, issues),
@@ -83,8 +82,7 @@ fn check_fn_panics(block: &syn::Block, fn_name: &str, issues: &mut Vec<PanicIssu
             }
             syn::Stmt::Macro(m) => {
                 if m.mac.path.is_ident("panic") {
-                    issues.push(PanicIssue {
-                        function_name: fn_name.to_string(),
+                    issues.push(LocalPanicIssue {
                         issue_type: "panic!".to_string(),
                         location: fn_name.to_string(),
                     });
@@ -95,12 +93,11 @@ fn check_fn_panics(block: &syn::Block, fn_name: &str, issues: &mut Vec<PanicIssu
     }
 }
 
-fn check_expr_panics(expr: &syn::Expr, fn_name: &str, issues: &mut Vec<PanicIssue>) {
+fn check_expr_panics(expr: &syn::Expr, fn_name: &str, issues: &mut Vec<LocalPanicIssue>) {
     match expr {
         syn::Expr::Macro(m) => {
             if m.mac.path.is_ident("panic") {
-                issues.push(PanicIssue {
-                    function_name: fn_name.to_string(),
+                issues.push(LocalPanicIssue {
                     issue_type: "panic!".to_string(),
                     location: fn_name.to_string(),
                 });
@@ -109,8 +106,7 @@ fn check_expr_panics(expr: &syn::Expr, fn_name: &str, issues: &mut Vec<PanicIssu
         syn::Expr::MethodCall(m) => {
             let method_name = m.method.to_string();
             if method_name == "unwrap" || method_name == "expect" {
-                issues.push(PanicIssue {
-                    function_name: fn_name.to_string(),
+                issues.push(LocalPanicIssue {
                     issue_type: method_name,
                     location: fn_name.to_string(),
                 });
@@ -142,5 +138,3 @@ fn check_expr_panics(expr: &syn::Expr, fn_name: &str, issues: &mut Vec<PanicIssu
         _ => {}
     }
 }
-
-use serde::Serialize;

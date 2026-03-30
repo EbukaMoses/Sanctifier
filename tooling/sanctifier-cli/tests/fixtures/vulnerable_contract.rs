@@ -1,5 +1,5 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, Env, Address, String};
+use soroban_sdk::{contract, contractimpl, Env, Address, Map, String, symbol_short};
 
 #[contract]
 pub struct VulnerableContract;
@@ -15,5 +15,13 @@ impl VulnerableContract {
             panic!("It overflowed!");
         }
         a + b // Unchecked arithmetic
+    }
+
+    /// BAD: large per-user map stored in instance storage.
+    pub fn store_user_profiles(env: Env) {
+        let profiles: Map<Address, String> = Map::new(&env);
+        env.storage()
+            .instance()
+            .set(&symbol_short!("profiles"), &profiles);
     }
 }
