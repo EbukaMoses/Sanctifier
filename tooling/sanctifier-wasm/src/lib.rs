@@ -338,7 +338,12 @@ fn build_progress_events(total_findings: usize) -> Vec<ProgressEvent> {
 }
 
 fn build_cache_key() -> String {
-    format!("{}:{}:{}", CACHE_NAMESPACE, env!("CARGO_PKG_VERSION"), SCHEMA_VERSION)
+    format!(
+        "{}:{}:{}",
+        CACHE_NAMESPACE,
+        env!("CARGO_PKG_VERSION"),
+        SCHEMA_VERSION
+    )
 }
 
 // ── Public WASM API ───────────────────────────────────────────────────────────

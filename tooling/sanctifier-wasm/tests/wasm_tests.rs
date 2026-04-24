@@ -1,6 +1,6 @@
 #![cfg(target_arch = "wasm32")]
 
-use sanctifier_wasm::{analyze, analyze_with_config, version, schema_version, finding_codes};
+use sanctifier_wasm::{analyze, analyze_with_config, finding_codes, schema_version, version};
 use wasm_bindgen_test::*;
 
 wasm_bindgen_test_configure!(run_in_browser);
@@ -28,7 +28,7 @@ fn test_analyze_valid_source() {
             pub fn hello() {}
         }
     "#;
-    
+
     let result = analyze(source);
     assert!(!result.is_null());
 }
@@ -63,7 +63,7 @@ fn test_analyze_with_config_valid_json() {
             pub fn hello() {}
         }
     "#;
-    
+
     let config = r#"{"ledger_limit": 64000}"#;
     let result = analyze_with_config(config, source);
     assert!(!result.is_null());
@@ -110,7 +110,7 @@ fn test_analyze_large_contract() {
         impl LargeContract {
         "#,
     );
-    
+
     // Add many functions to simulate a large contract
     for i in 0..100 {
         source.push_str(&format!(
@@ -121,9 +121,9 @@ fn test_analyze_large_contract() {
             "#
         ));
     }
-    
+
     source.push_str("}");
-    
+
     let result = analyze(&source);
     assert!(!result.is_null());
 }
@@ -144,7 +144,7 @@ fn test_analyze_performance_simple() {
             pub fn simple_fn() {}
         }
     "#;
-    
+
     // Should complete quickly
     let result = analyze(source);
     assert!(!result.is_null());
