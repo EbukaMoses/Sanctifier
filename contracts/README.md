@@ -4,7 +4,7 @@ This directory contains the Soroban smart contracts for the project.
 
 ## Structure
 - `vulnerable-contract/`: A reference implementation demonstrating common security pitfalls Sanctifier can detect.
-- `guarded-contract/`: A secure implementation using Sanctifier's runtime guards.
+- `fixtures/finding-codes/`: Scan fixtures mapped to `S001` through `S012`.
 
 ## Development
 
@@ -17,4 +17,9 @@ cargo test
 Run the Sanctifier analysis tool on these contracts:
 ```bash
 sanctifier analyze .
+```
+
+For finding-code focused fixture scans:
+```bash
+sanctifier analyze contracts/fixtures/finding-codes --format json
 ```

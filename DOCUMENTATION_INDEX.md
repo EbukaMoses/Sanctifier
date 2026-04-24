@@ -88,6 +88,22 @@
 - Integration examples
 - Troubleshooting
 
+### Frontend Report and Offline Behavior
+
+**[frontend/docs/report-export.md](frontend/docs/report-export.md)**  
+**[frontend/docs/offline-dev-mode.md](frontend/docs/offline-dev-mode.md)**
+
+- Report export behavior (PDF/CSV/JSON)
+- Offline/local JSON workflow vs contract-upload mode
+- Contributor guardrails for frontend parsing and export paths
+
+### Finding-Code Fixtures
+
+**[contracts/fixtures/finding-codes/README.md](contracts/fixtures/finding-codes/README.md)**
+
+- Fixture matrix for finding codes `S001` through `S012`
+- Upgrade/admin risk fixture notes for hardened validation paths
+
 ### Sanctifier CLI Deploy Command
 
 **Location:** `tooling/sanctifier-cli/src/commands/deploy.rs`
