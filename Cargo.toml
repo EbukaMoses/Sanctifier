@@ -16,6 +16,7 @@ members = [
     "contracts/governance",
     "contracts/flashloan-token",
     "contracts/proxy",
+    "contracts/benchmark",
 ]
 resolver = "2"
 

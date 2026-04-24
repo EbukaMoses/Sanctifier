@@ -78,6 +78,14 @@
 - Integration examples
 - Troubleshooting
 
+### Contracts CI Matrix
+**[docs/contracts-ci.md](docs/contracts-ci.md)**
+- Per-contract compile matrix (CI hardening — issues #594, #596, #597)
+- Adding new contracts to the matrix
+- Deterministic WASM builds (`scripts/build-contracts.sh`)
+- WASM size budgets and CPU instruction ceilings (`contracts/benchmark/src/budgets.rs`)
+- Threat model notes
+
 ### Sanctifier CLI Deploy Command
 **Location:** `tooling/sanctifier-cli/src/commands/deploy.rs`
 - Integrated into sanctifier CLI
