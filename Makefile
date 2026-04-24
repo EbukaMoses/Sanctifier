@@ -12,10 +12,12 @@ test:
 lint:
 	cargo fmt --all --check
 	cargo clippy --workspace -- -D warnings
+	npm install && npm run format:db:check && npm run lint:db
 
 ## Auto-format all workspace source files.
 fmt:
 	cargo fmt --all
+	npm install && npm run format:db
 
 ## Run cargo-audit and cargo-deny supply-chain checks.
 audit:

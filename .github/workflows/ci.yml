@@ -69,8 +69,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libdbus-1-dev pkg-config
 
-      - name: Lint (make lint smoke test)
-        run: make lint
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies and Lint (make lint smoke test)
+        run: |
+          npm ci
+          make lint
 
       - name: Check formatting
         run: cargo fmt --all --check

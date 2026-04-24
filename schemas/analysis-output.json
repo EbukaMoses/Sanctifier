@@ -23,7 +23,15 @@
     "metadata": {
       "type": "object",
       "description": "Run-level metadata.",
-      "required": ["version", "timestamp", "project_path", "format", "timeout_secs", "cached_files", "total_files"],
+      "required": [
+        "version",
+        "timestamp",
+        "project_path",
+        "format",
+        "timeout_secs",
+        "cached_files",
+        "total_files"
+      ],
       "additionalProperties": false,
       "properties": {
         "version": {
@@ -278,7 +286,14 @@
   "definitions": {
     "ContractCallEdge": {
       "type": "object",
-      "required": ["caller", "callee", "file", "line", "contract_id_expr", "function_expr"],
+      "required": [
+        "caller",
+        "callee",
+        "file",
+        "line",
+        "contract_id_expr",
+        "function_expr"
+      ],
       "additionalProperties": false,
       "properties": {
         "caller": { "type": "string" },
@@ -316,9 +331,18 @@
       "required": ["key_value", "key_type", "location", "message"],
       "additionalProperties": false,
       "properties": {
-        "key_value": { "type": "string", "description": "The storage key literal or expression." },
-        "key_type": { "type": "string", "description": "The type of the key (e.g. Symbol, BytesN)." },
-        "location": { "type": "string", "description": "Human-readable source location." },
+        "key_value": {
+          "type": "string",
+          "description": "The storage key literal or expression."
+        },
+        "key_type": {
+          "type": "string",
+          "description": "The type of the key (e.g. Symbol, BytesN)."
+        },
+        "location": {
+          "type": "string",
+          "description": "Human-readable source location."
+        },
         "message": { "type": "string" }
       }
     },
@@ -328,9 +352,20 @@
       "required": ["struct_name", "estimated_size", "limit", "level"],
       "additionalProperties": false,
       "properties": {
-        "struct_name": { "type": "string", "description": "Name of the #[contracttype] struct or enum." },
-        "estimated_size": { "type": "integer", "minimum": 0, "description": "Estimated serialised size in bytes." },
-        "limit": { "type": "integer", "minimum": 0, "description": "Configured ledger-entry size limit in bytes." },
+        "struct_name": {
+          "type": "string",
+          "description": "Name of the #[contracttype] struct or enum."
+        },
+        "estimated_size": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Estimated serialised size in bytes."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Configured ledger-entry size limit in bytes."
+        },
         "level": {
           "type": "string",
           "enum": ["ExceedsLimit", "ApproachingLimit"],
@@ -349,8 +384,15 @@
           "enum": ["Panic", "Unwrap", "Expect"],
           "description": "The kind of unsafe pattern."
         },
-        "line": { "type": "integer", "minimum": 1, "description": "1-based line number." },
-        "snippet": { "type": "string", "description": "Source snippet around the pattern." }
+        "line": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-based line number."
+        },
+        "snippet": {
+          "type": "string",
+          "description": "Source snippet around the pattern."
+        }
       }
     },
     "PanicIssue": {
@@ -360,7 +402,10 @@
       "additionalProperties": false,
       "properties": {
         "function_name": { "type": "string" },
-        "issue_type": { "type": "string", "description": "One of: panic!, unwrap, expect." },
+        "issue_type": {
+          "type": "string",
+          "description": "One of: panic!, unwrap, expect."
+        },
         "location": { "type": "string" }
       }
     },
@@ -371,7 +416,10 @@
       "additionalProperties": false,
       "properties": {
         "function_name": { "type": "string" },
-        "operation": { "type": "string", "description": "Operator: +, -, *, +=, -=, *=." },
+        "operation": {
+          "type": "string",
+          "description": "Operator: +, -, *, +=, -=, *=."
+        },
         "suggestion": { "type": "string" },
         "location": { "type": "string" }
       }
@@ -395,7 +443,13 @@
     "EventIssue": {
       "type": "object",
       "description": "Inconsistent event schema or sub-optimal topic pattern (raw struct).",
-      "required": ["function_name", "event_name", "issue_type", "message", "location"],
+      "required": [
+        "function_name",
+        "event_name",
+        "issue_type",
+        "message",
+        "location"
+      ],
       "additionalProperties": false,
       "properties": {
         "function_name": { "type": "string" },
@@ -428,7 +482,13 @@
       "properties": {
         "category": {
           "type": "string",
-          "enum": ["admin_control", "timelock", "init_pattern", "storage_layout", "governance"]
+          "enum": [
+            "admin_control",
+            "timelock",
+            "init_pattern",
+            "storage_layout",
+            "governance"
+          ]
         },
         "function_name": {
           "type": ["string", "null"],
@@ -442,14 +502,23 @@
     "UpgradeReport": {
       "type": "object",
       "description": "Upgrade-safety report produced by the upgrade-pattern analyser.",
-      "required": ["findings", "upgrade_mechanisms", "init_functions", "storage_types", "suggestions"],
+      "required": [
+        "findings",
+        "upgrade_mechanisms",
+        "init_functions",
+        "storage_types",
+        "suggestions"
+      ],
       "additionalProperties": false,
       "properties": {
         "findings": {
           "type": "array",
           "items": { "$ref": "#/definitions/UpgradeFinding" }
         },
-        "upgrade_mechanisms": { "type": "array", "items": { "type": "string" } },
+        "upgrade_mechanisms": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
         "init_functions": { "type": "array", "items": { "type": "string" } },
         "storage_types": { "type": "array", "items": { "type": "string" } },
         "suggestions": { "type": "array", "items": { "type": "string" } }
@@ -469,13 +538,23 @@
     "Sep41Issue": {
       "type": "object",
       "description": "SEP-41 token-interface compliance issue (raw struct).",
-      "required": ["function_name", "kind", "location", "message", "expected_signature"],
+      "required": [
+        "function_name",
+        "kind",
+        "location",
+        "message",
+        "expected_signature"
+      ],
       "additionalProperties": false,
       "properties": {
         "function_name": { "type": "string" },
         "kind": {
           "type": "string",
-          "enum": ["missing_function", "signature_mismatch", "authorization_mismatch"]
+          "enum": [
+            "missing_function",
+            "signature_mismatch",
+            "authorization_mismatch"
+          ]
         },
         "location": { "type": "string" },
         "message": { "type": "string" },
@@ -489,7 +568,17 @@
     "VulnMatch": {
       "type": "object",
       "description": "Match against the community vulnerability database.",
-      "required": ["vuln_id", "name", "severity", "category", "description", "recommendation", "file", "line", "snippet"],
+      "required": [
+        "vuln_id",
+        "name",
+        "severity",
+        "category",
+        "description",
+        "recommendation",
+        "file",
+        "line",
+        "snippet"
+      ],
       "additionalProperties": false,
       "properties": {
         "vuln_id": { "type": "string" },
@@ -526,7 +615,10 @@
         "struct_name": { "type": "string" },
         "estimated_size": { "type": "integer", "minimum": 0 },
         "limit": { "type": "integer", "minimum": 0 },
-        "level": { "type": "string", "enum": ["ExceedsLimit", "ApproachingLimit"] }
+        "level": {
+          "type": "string",
+          "enum": ["ExceedsLimit", "ApproachingLimit"]
+        }
       }
     },
     "FindingUnsafePattern": {
@@ -536,7 +628,10 @@
       "additionalProperties": false,
       "properties": {
         "code": { "type": "string", "const": "S006" },
-        "pattern_type": { "type": "string", "enum": ["Panic", "Unwrap", "Expect"] },
+        "pattern_type": {
+          "type": "string",
+          "enum": ["Panic", "Unwrap", "Expect"]
+        },
         "line": { "type": "integer", "minimum": 1 },
         "snippet": { "type": "string" }
       }
@@ -548,7 +643,10 @@
       "additionalProperties": false,
       "properties": {
         "code": { "type": "string", "const": "S001" },
-        "function": { "type": "string", "description": "Name of the unguarded function." }
+        "function": {
+          "type": "string",
+          "description": "Name of the unguarded function."
+        }
       }
     },
     "FindingPanic": {
@@ -566,7 +664,13 @@
     "FindingArithmetic": {
       "type": "object",
       "description": "S003 — unchecked arithmetic with overflow risk.",
-      "required": ["code", "function_name", "operation", "suggestion", "location"],
+      "required": [
+        "code",
+        "function_name",
+        "operation",
+        "suggestion",
+        "location"
+      ],
       "additionalProperties": false,
       "properties": {
         "code": { "type": "string", "const": "S003" },
@@ -597,7 +701,10 @@
       "properties": {
         "code": { "type": "string", "const": "S008" },
         "event_name": { "type": "string" },
-        "issue_type": { "type": "string", "enum": ["InconsistentSchema", "OptimizableTopic"] },
+        "issue_type": {
+          "type": "string",
+          "enum": ["InconsistentSchema", "OptimizableTopic"]
+        },
         "location": { "type": "string" },
         "message": { "type": "string" }
       }
@@ -605,7 +712,13 @@
     "FindingUnhandledResult": {
       "type": "object",
       "description": "S009 — Result return value not consumed.",
-      "required": ["code", "function_name", "call_expression", "location", "message"],
+      "required": [
+        "code",
+        "function_name",
+        "call_expression",
+        "location",
+        "message"
+      ],
       "additionalProperties": false,
       "properties": {
         "code": { "type": "string", "const": "S009" },
@@ -624,7 +737,13 @@
         "code": { "type": "string", "const": "S010" },
         "category": {
           "type": "string",
-          "enum": ["admin_control", "timelock", "init_pattern", "storage_layout", "governance"]
+          "enum": [
+            "admin_control",
+            "timelock",
+            "init_pattern",
+            "storage_layout",
+            "governance"
+          ]
         },
         "function_name": { "type": ["string", "null"] },
         "location": { "type": "string" },
@@ -647,14 +766,25 @@
     "FindingSep41Issue": {
       "type": "object",
       "description": "S012 — SEP-41 token interface deviation.",
-      "required": ["code", "function_name", "kind", "location", "message", "expected_signature"],
+      "required": [
+        "code",
+        "function_name",
+        "kind",
+        "location",
+        "message",
+        "expected_signature"
+      ],
       "additionalProperties": false,
       "properties": {
         "code": { "type": "string", "const": "S012" },
         "function_name": { "type": "string" },
         "kind": {
           "type": "string",
-          "enum": ["missing_function", "signature_mismatch", "authorization_mismatch"]
+          "enum": [
+            "missing_function",
+            "signature_mismatch",
+            "authorization_mismatch"
+          ]
         },
         "location": { "type": "string" },
         "message": { "type": "string" },
@@ -669,7 +799,10 @@
       "additionalProperties": false,
       "properties": {
         "code": { "type": "string", "const": "S000" },
-        "file": { "type": "string", "description": "Path of the file that timed out." },
+        "file": {
+          "type": "string",
+          "description": "Path of the file that timed out."
+        },
         "message": { "type": "string" }
       }
     }
