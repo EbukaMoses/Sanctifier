@@ -12,6 +12,31 @@ const GUARD_FAILURES: &str = "guard_failures";
 const EXECUTION_METRICS: &str = "exec_metrics";
 const HEALTHY_STORAGE_LIMIT: u32 = 64;
 
+mod event_fixtures {
+    use soroban_sdk::{Env, Symbol};
+
+    pub const TOPIC_GUARD_WRAPPER: &str = "guard_wrapper";
+    pub const EVENT_WRAPPER_INITIALIZED: &str = "wrapper_initialized";
+    pub const EVENT_PRE_EXEC_GUARD: &str = "pre_exec_guard";
+    pub const EVENT_POST_EXEC_GUARD: &str = "post_exec_guard";
+    pub const EVENT_EXECUTION_LOGGED: &str = "execution_logged";
+    pub const EVENT_GUARD_FAILURE: &str = "guard_failure";
+
+    pub const STATUS_IDEMPOTENT: &str = "idempotent";
+    pub const STATUS_SUCCESS: &str = "success";
+    pub const STATUS_PASSED: &str = "passed";
+    pub const STATUS_RECORDED: &str = "recorded";
+    pub const STATUS_WRAPPED_NOT_SET: &str = "wrapped_contract_not_set";
+    pub const STATUS_WRAPPED_CALL_ERROR: &str = "wrapped_call_error";
+
+    pub fn emit(env: &Env, event_name: &str, status: &str) {
+        env.events().publish(
+            (Symbol::new(env, TOPIC_GUARD_WRAPPER),),
+            (Symbol::new(env, event_name), Symbol::new(env, status)),
+        );
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct GuardConfig {
     pub check_storage_invariants: bool,
@@ -52,7 +77,11 @@ impl RuntimeGuardWrapper {
             .instance()
             .has(&Symbol::new(&env, WRAPPED_CONTRACT_ADDRESS))
         {
-            Self::emit_guard_event(env, "wrapper_initialized", "idempotent");
+            Self::emit_guard_event(
+                env,
+                event_fixtures::EVENT_WRAPPER_INITIALIZED,
+                event_fixtures::STATUS_IDEMPOTENT,
+            );
             return;
         }
 
@@ -87,7 +116,11 @@ impl RuntimeGuardWrapper {
             &Vec::<(u32, bool, u64, u64)>::new(&env),
         );
 
-        Self::emit_guard_event(env, "wrapper_initialized", "success");
+        Self::emit_guard_event(
+            env,
+            event_fixtures::EVENT_WRAPPER_INITIALIZED,
+            event_fixtures::STATUS_SUCCESS,
+        );
     }
 
     pub fn get_wrapped_contract(env: Env) -> Address {
@@ -111,7 +144,11 @@ impl RuntimeGuardWrapper {
             .instance()
             .get::<Symbol, Address>(&Symbol::new(&env, WRAPPED_CONTRACT_ADDRESS));
         if wrapped.is_none() {
-            Self::emit_guard_event(env, "pre_exec_guard", "wrapped_contract_not_set");
+            Self::emit_guard_event(
+                env,
+                event_fixtures::EVENT_PRE_EXEC_GUARD,
+                event_fixtures::STATUS_WRAPPED_NOT_SET,
+            );
             return Err(Error::from_contract_error(1));
         }
 
@@ -121,7 +158,11 @@ impl RuntimeGuardWrapper {
 
     fn post_execution_guards(env: Env) -> Result<(), Error> {
         Self::verify_storage_invariants(env.clone())?;
-        Self::emit_guard_event(env, "post_exec_guard", "passed");
+        Self::emit_guard_event(
+            env,
+            event_fixtures::EVENT_POST_EXEC_GUARD,
+            event_fixtures::STATUS_PASSED,
+        );
         Ok(())
     }
 
@@ -166,7 +207,16 @@ impl RuntimeGuardWrapper {
         }
 
         let start_tick = env.ledger().timestamp();
-        let result = Self::simulate_wrapped_call(env.clone(), function_name, args)?;
+        let result = match Self::simulate_wrapped_call(env.clone(), function_name, args) {
+            Ok(val) => val,
+            Err(err) => {
+                Self::record_guard_failure(
+                    env.clone(),
+                    Symbol::new(&env, event_fixtures::STATUS_WRAPPED_CALL_ERROR),
+                );
+                return Err(err);
+            }
+        };
         let val: Val = function_name.clone().into_val(&env);
         let call_hash = (val.get_payload().wrapping_mul(31) ^ start_tick.wrapping_mul(17)) as u32;
 
@@ -241,7 +291,11 @@ impl RuntimeGuardWrapper {
             persistent.set(&call_log_symbol, &log);
         }
 
-        Self::emit_guard_event(env, "execution_logged", "success");
+        Self::emit_guard_event(
+            env,
+            event_fixtures::EVENT_EXECUTION_LOGGED,
+            event_fixtures::STATUS_SUCCESS,
+        );
     }
 
     fn record_metrics(env: Env, metrics: ExecutionMetrics) {
@@ -277,14 +331,15 @@ impl RuntimeGuardWrapper {
             .unwrap_or_else(|| Vec::new(&env));
         failures.push_back(failure);
         persistent.set(&failure_symbol, &failures);
-        Self::emit_guard_event(env, "guard_failure", "recorded");
+        Self::emit_guard_event(
+            env,
+            event_fixtures::EVENT_GUARD_FAILURE,
+            event_fixtures::STATUS_RECORDED,
+        );
     }
 
     fn emit_guard_event(env: Env, event_name: &str, status: &str) {
-        env.events().publish(
-            (Symbol::new(&env, "guard_wrapper"),),
-            (Symbol::new(&env, event_name), Symbol::new(&env, status)),
-        );
+        event_fixtures::emit(&env, event_name, status);
     }
 
     pub fn get_stats(env: Env) -> (u32, u32, u32) {

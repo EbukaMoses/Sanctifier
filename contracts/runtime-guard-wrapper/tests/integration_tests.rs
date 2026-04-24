@@ -112,3 +112,19 @@ fn get_stats_tracks_successes_and_failures() {
 
     assert_eq!(client.get_stats(), (3, 3, 0));
 }
+
+#[test]
+fn execute_guarded_tracks_wrapped_call_result_errors() {
+    let env = Env::default();
+    let (client, _) = setup(&env);
+    let invalid_sum_args = vec![
+        &env,
+        Symbol::new(&env, "badarg").into_val(&env),
+        3u32.into_val(&env),
+    ];
+
+    let result = client.try_execute_guarded(&Symbol::new(&env, "sum"), &invalid_sum_args);
+
+    assert!(result.is_err());
+    assert_eq!(client.get_stats(), (0, 0, 0));
+}

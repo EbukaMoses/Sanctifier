@@ -1,0 +1,8 @@
+[package]
+
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+

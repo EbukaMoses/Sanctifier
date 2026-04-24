@@ -7,6 +7,11 @@
 //!
 //! * [`analyze`] — run all analysis passes with default config.
 //! * [`analyze_with_config`] — run with a JSON-serialised [`SanctifyConfig`].
+//! * [`analyze_with_progress`] — run analysis and emit deterministic progress events.
+//! * [`version`] — return the WASM module version.
+//! * [`schema_version`] — return the analysis output schema version.
+//! * [`finding_codes`] — return the finding code catalogue.
+//! * [`default_config_json`] — return default config JSON for easy customization.
 
 use sanctifier_core::{
     finding_codes, Analyzer, ArithmeticIssue, AuthGapIssue, EventIssue, PanicIssue, SanctifyConfig,
@@ -15,12 +20,75 @@ use sanctifier_core::{
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+/// Analysis output schema version (independent of tool version).
+const SCHEMA_VERSION: &str = "1.0.0";
+
+/// Maximum allowed source code size (10 MB).
+const MAX_SOURCE_SIZE: usize = 10 * 1024 * 1024;
+
+/// Minimum required source code size (1 byte).
+const MIN_SOURCE_SIZE: usize = 1;
+/// Namespace prefix for browser-side wasm asset caches.
+const CACHE_NAMESPACE: &str = "sanctifier-wasm";
+
 // Improve panic messages in the browser console.
 fn set_panic_hook() {
     console_error_panic_hook::set_once();
 }
 
+// ── Input validation ───────────────────────────────────────────────────────────
+
+/// Validate source code input.
+///
+/// # Errors
+/// Returns a descriptive error message if validation fails.
+fn validate_source(source: &str) -> Result<(), String> {
+    let len = source.len();
+
+    if len < MIN_SOURCE_SIZE {
+        return Err("Source code cannot be empty".to_string());
+    }
+
+    if len > MAX_SOURCE_SIZE {
+        return Err(format!(
+            "Source code exceeds maximum size of {} bytes (got {} bytes)",
+            MAX_SOURCE_SIZE, len
+        ));
+    }
+
+    Ok(())
+}
+
+/// Validate configuration JSON.
+///
+/// # Errors
+/// Returns a descriptive error message if validation fails.
+fn validate_config_json(config_json: &str) -> Result<(), String> {
+    if config_json.trim().is_empty() {
+        return Ok(());
+    }
+
+    if config_json.len() > 1024 * 1024 {
+        return Err("Configuration JSON exceeds maximum size of 1 MB".to_string());
+    }
+
+    Ok(())
+}
+
 // ── Output types ──────────────────────────────────────────────────────────────
+
+/// Error response for validation or processing failures.
+#[derive(Serialize)]
+pub struct ErrorResponse {
+    /// Error code (e.g., "INVALID_INPUT", "PARSE_ERROR").
+    pub error_code: String,
+    /// Human-readable error message.
+    pub message: String,
+    /// Schema version for consistency.
+    pub schema_version: &'static str,
+}
 
 /// A single finding emitted by any analysis pass, normalised for JS consumers.
 #[derive(Serialize)]
@@ -43,6 +111,8 @@ pub struct AnalysisResult {
     pub findings: Vec<Finding>,
     /// Pre-computed counts so JS consumers don't have to iterate.
     pub summary: Summary,
+    /// Schema version for versioning alignment.
+    pub schema_version: &'static str,
 }
 
 /// Aggregate counts included in every [`AnalysisResult`].
@@ -61,6 +131,30 @@ pub struct Summary {
     pub sep41_issues: usize,
     pub has_critical: bool,
     pub has_high: bool,
+}
+
+/// Progress event emitted by [`analyze_with_progress`].
+#[derive(Serialize)]
+pub struct ProgressEvent {
+    pub phase: &'static str,
+    pub percent: u8,
+    pub findings_so_far: usize,
+}
+
+/// Progressive response shape for browsers rendering partial progress.
+#[derive(Serialize)]
+pub struct ProgressiveAnalysisResult {
+    pub events: Vec<ProgressEvent>,
+    pub result: AnalysisResult,
+}
+
+/// Minimal metadata required by browser cache layers.
+#[derive(Serialize)]
+pub struct CacheMetadata {
+    pub package: &'static str,
+    pub version: &'static str,
+    pub schema_version: &'static str,
+    pub cache_key: String,
 }
 
 // ── Helpers to convert core types into Finding ───────────────────────────────
@@ -216,7 +310,35 @@ fn run_analysis(analyzer: &Analyzer, source: &str) -> AnalysisResult {
         has_high: !auth_gaps.is_empty() || !upgrade_report.findings.is_empty(),
     };
 
-    AnalysisResult { findings, summary }
+    AnalysisResult {
+        findings,
+        summary,
+        schema_version: SCHEMA_VERSION,
+    }
+}
+
+const PROGRESS_PHASES: [(&str, u8); 5] = [
+    ("Validating source input", 10),
+    ("Parsing and indexing contract", 30),
+    ("Running security passes", 60),
+    ("Aggregating findings", 85),
+    ("Finalizing schema output", 100),
+];
+
+fn build_progress_events(total_findings: usize) -> Vec<ProgressEvent> {
+    PROGRESS_PHASES
+        .iter()
+        .enumerate()
+        .map(|(idx, (phase, percent))| ProgressEvent {
+            phase,
+            percent: *percent,
+            findings_so_far: ((idx + 1) * total_findings) / PROGRESS_PHASES.len(),
+        })
+        .collect()
+}
+
+fn build_cache_key() -> String {
+    format!("{}:{}:{}", CACHE_NAMESPACE, env!("CARGO_PKG_VERSION"), SCHEMA_VERSION)
 }
 
 // ── Public WASM API ───────────────────────────────────────────────────────────
@@ -227,12 +349,26 @@ fn run_analysis(analyzer: &Analyzer, source: &str) -> AnalysisResult {
 /// ```json
 /// {
 ///   "findings": [{ "code": "S001", "category": "...", "message": "...", "location": "..." }],
-///   "summary":  { "total": 3, "has_critical": false, "has_high": true, ... }
+///   "summary":  { "total": 3, "has_critical": false, "has_high": true, ... },
+///   "schema_version": "1.0.0"
 /// }
 /// ```
+///
+/// # Errors
+/// Returns an error object if source code validation fails.
 #[wasm_bindgen]
 pub fn analyze(source: &str) -> JsValue {
     set_panic_hook();
+
+    if let Err(err) = validate_source(source) {
+        let error = ErrorResponse {
+            error_code: "INVALID_INPUT".to_string(),
+            message: err,
+            schema_version: SCHEMA_VERSION,
+        };
+        return serde_wasm_bindgen::to_value(&error).unwrap_or(JsValue::NULL);
+    }
+
     let analyzer = Analyzer::new(SanctifyConfig::default());
     let result = run_analysis(&analyzer, source);
     serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
@@ -241,13 +377,62 @@ pub fn analyze(source: &str) -> JsValue {
 /// Analyse with a JSON-serialised [`SanctifyConfig`].
 ///
 /// Falls back to `SanctifyConfig::default()` if `config_json` cannot be parsed.
+///
+/// # Errors
+/// Returns an error object if input validation fails.
 #[wasm_bindgen]
 pub fn analyze_with_config(config_json: &str, source: &str) -> JsValue {
     set_panic_hook();
+
+    if let Err(err) = validate_config_json(config_json) {
+        let error = ErrorResponse {
+            error_code: "INVALID_CONFIG".to_string(),
+            message: err,
+            schema_version: SCHEMA_VERSION,
+        };
+        return serde_wasm_bindgen::to_value(&error).unwrap_or(JsValue::NULL);
+    }
+
+    if let Err(err) = validate_source(source) {
+        let error = ErrorResponse {
+            error_code: "INVALID_INPUT".to_string(),
+            message: err,
+            schema_version: SCHEMA_VERSION,
+        };
+        return serde_wasm_bindgen::to_value(&error).unwrap_or(JsValue::NULL);
+    }
+
     let config: SanctifyConfig = serde_json::from_str(config_json).unwrap_or_default();
     let analyzer = Analyzer::new(config);
     let result = run_analysis(&analyzer, source);
     serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+}
+
+/// Analyse with deterministic progress snapshots for streaming-like UX.
+///
+/// This returns both progress events and the final [`AnalysisResult`], allowing
+/// frontend clients to show partial progress while keeping output deterministic.
+#[wasm_bindgen]
+pub fn analyze_with_progress(source: &str) -> JsValue {
+    set_panic_hook();
+
+    if let Err(err) = validate_source(source) {
+        let error = ErrorResponse {
+            error_code: "INVALID_INPUT".to_string(),
+            message: err,
+            schema_version: SCHEMA_VERSION,
+        };
+        return serde_wasm_bindgen::to_value(&error).unwrap_or(JsValue::NULL);
+    }
+
+    let analyzer = Analyzer::new(SanctifyConfig::default());
+    let result = run_analysis(&analyzer, source);
+    let progressive = ProgressiveAnalysisResult {
+        events: build_progress_events(result.summary.total),
+        result,
+    };
+
+    serde_wasm_bindgen::to_value(&progressive).unwrap_or(JsValue::NULL)
 }
 
 /// Return the full finding-code catalogue as a JS array.
@@ -259,8 +444,44 @@ pub fn finding_codes() -> JsValue {
     serde_wasm_bindgen::to_value(&codes).unwrap_or(JsValue::NULL)
 }
 
-/// Return the crate version string (e.g. `"0.1.0"`).
+/// Return the crate version string (e.g. `"0.2.0"`).
 #[wasm_bindgen]
 pub fn version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
+}
+
+/// Return the analysis output schema version (independent of tool version).
+///
+/// This version is used for JSON output compatibility and should be incremented
+/// when the output format changes in a breaking way.
+#[wasm_bindgen]
+pub fn schema_version() -> String {
+    SCHEMA_VERSION.to_string()
+}
+
+/// Return default config JSON for easy copy/edit in browser tooling.
+#[wasm_bindgen]
+pub fn default_config_json() -> String {
+    serde_json::to_string_pretty(&SanctifyConfig::default()).unwrap_or_else(|_| "{}".to_string())
+}
+
+/// Return a deterministic cache key for wasm module assets.
+///
+/// Frontend loaders can use this value to bust stale service-worker and
+/// CacheStorage entries whenever the package or schema version changes.
+#[wasm_bindgen]
+pub fn asset_cache_key() -> String {
+    build_cache_key()
+}
+
+/// Return cache metadata for offline-first consumers.
+#[wasm_bindgen]
+pub fn cache_metadata() -> JsValue {
+    let metadata = CacheMetadata {
+        package: "sanctifier-wasm",
+        version: env!("CARGO_PKG_VERSION"),
+        schema_version: SCHEMA_VERSION,
+        cache_key: build_cache_key(),
+    };
+    serde_wasm_bindgen::to_value(&metadata).unwrap_or(JsValue::NULL)
 }
