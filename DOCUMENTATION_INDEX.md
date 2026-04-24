@@ -115,6 +115,15 @@
 - Upgrade/admin risk fixture notes for hardened validation paths
 - SEP-41 conformance fixture entrypoint: `s012_token_interface.rs`
 
+### Contract Versioning Conventions
+
+**[contracts/fixtures/versioning/README.md](contracts/fixtures/versioning/README.md)**
+
+- `CONTRACT_VERSION` constant and `get_version` / `migrate` convention
+- Named test fixtures: `fixture_empty_pool`, `fixture_v1_funded_pool`, `fixture_v2_pool`, `fixture_initialized`, `fixture_active`
+- Coverage matrix for all versioning properties (stamp-on-init, idempotency, migration chain, replay prevention)
+- Step-by-step guide for contributors adding a new schema version
+
 ### Sanctifier CLI Deploy Command
 
 **Location:** `tooling/sanctifier-cli/src/commands/deploy.rs`
@@ -151,6 +160,14 @@
 - Multiple job types
 - Scheduled validation
 - Artifact management
+
+### Sanctifier Scan GitHub Action
+
+**Location:** `action.yml`
+
+- Composite action for running `sanctifier analyze` in CI
+- Support matrix: `docs/github-action-support-matrix.md` (includes debug logging mode)
+- Threat model notes: `docs/github-action-threat-model.md`
 
 ---
 
@@ -276,6 +293,7 @@ See: [QUICK_START.md - Verification](QUICK_START.md#-check-results-1-min)
 - Threat Model Notes: [docs/github-action-threat-model.md](docs/github-action-threat-model.md)
 - Action unit test fixtures: [tests/action/fixtures](tests/action/fixtures)
 - Vulnerability DB format and validation: [docs/vulnerability-database-format.md](docs/vulnerability-database-format.md)
+- Data + schemas performance budgets/benchmarks: [docs/data-schemas-performance.md](docs/data-schemas-performance.md)
 
 **Production Setup**
 
