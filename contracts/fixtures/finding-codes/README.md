@@ -24,6 +24,14 @@ This directory contains fixture source files used as deterministic scan inputs f
 | `S010` | `s010_upgrade_admin.rs` |
 | `S011` | `s011_formal_verification.rs` |
 | `S012` | `s012_token_interface.rs` |
+| `S013` | `s013_reentrancy.rs` |
+| `S014` | `s014_admin_trust.rs` |
+| `S015` | `s015_secrets.rs` |
+| `S016` | `s016_truncation.rs` |
+| `S018` | `s018_unsafe_prng.rs` |
+| `S019` | `s019_unchecked_calls.rs` |
+| `S020` | `s020_missing_events.rs` |
+| `S021` | `s021_storage_misuse.rs` |
 
 ## Usage
 

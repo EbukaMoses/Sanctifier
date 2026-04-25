@@ -379,6 +379,8 @@ pub struct SmtStrategyLatency {
 /// Aggregate benchmark across all [`SmtProofStrategy`] variants.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SmtLatencyBenchmarkReport {
+    /// Timestamp of the benchmark run.
+    pub timestamp: String,
     /// How many iterations were run per strategy.
     pub iterations_per_strategy: usize,
     /// Per-strategy results.
@@ -437,6 +439,7 @@ pub fn run_smt_latency_benchmark(iterations_per_strategy: usize) -> SmtLatencyBe
     }
 
     SmtLatencyBenchmarkReport {
+        timestamp: chrono::Utc::now().to_rfc3339(),
         iterations_per_strategy: iterations,
         strategies: results,
     }

@@ -23,44 +23,28 @@ pub const CONTRACT_VERSION: u32 = 1;
 // a failing test or on-chain event can be matched to a specific guard stage
 // without consulting source code.
 
-/// Pre-execution guard: wrapped contract address has not been set via `init`.
-pub const ERR_WRAPPED_CONTRACT_NOT_SET: u32 = 1;
-
-/// Pre-execution guard: instance storage is missing the wrapped contract key —
-/// indicates storage was cleared or the contract was not properly initialised.
-pub const ERR_STORAGE_INTEGRITY_FAILED: u32 = 2;
-
-/// Execution monitoring: the requested function name is not registered in the
-/// allowed function dispatch table.
-pub const ERR_UNKNOWN_FUNCTION: u32 = 3;
-
-/// Execution monitoring: the argument vector length does not match the expected
-/// arity for the requested function.
-pub const ERR_ARGUMENT_COUNT_MISMATCH: u32 = 4;
-
-// ── Error message helpers ──────────────────────────────────────────────────────
-
-/// Human-readable error descriptions keyed to each semantic error code.
-///
-/// These are intentionally kept in `no_std` (no heap allocations beyond the
-/// string literal itself) so they can be embedded in event data or returned
-/// to callers via the host SDK without requiring `std::string::String`.
-pub mod error_messages {
-    pub const WRAPPED_CONTRACT_NOT_SET: &str =
-        "Guard wrapper has not been initialised: call `init` with a wrapped contract address first";
-
-    pub const STORAGE_INTEGRITY_FAILED: &str =
-        "Instance storage integrity check failed: wrapped contract address key is missing — \
-         the contract may have been deployed without calling `init`";
-
-    pub const UNKNOWN_FUNCTION: &str =
-        "Requested function name is not registered in the guard dispatch table — \
-         only `ping`, `echo`, and `sum` are currently supported";
-
-    pub const ARGUMENT_COUNT_MISMATCH: &str =
-        "Argument count does not match the expected arity for the requested function — \
-         check the function signature in the dispatch table";
+#[soroban_sdk::contracterror]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[repr(u32)]
+pub enum RuntimeGuardError {
+    /// Pre-execution guard: wrapped contract address has not been set via `init`.
+    WrappedContractNotSet = 1,
+    /// Pre-execution guard: instance storage is missing the wrapped contract key.
+    StorageIntegrityFailed = 2,
+    /// Execution monitoring: the requested function name is not registered.
+    UnknownFunction = 3,
+    /// Execution monitoring: argument count mismatch.
+    ArgumentCountMismatch = 4,
 }
+
+// ── Legacy Compatibility ───────────────────────────────────────────────────────
+// The following constants are preserved to ensure minimal breaking surface for
+// downstream consumers and tests. New code should use `RuntimeGuardError`.
+
+pub const ERR_WRAPPED_CONTRACT_NOT_SET: u32 = RuntimeGuardError::WrappedContractNotSet as u32;
+pub const ERR_STORAGE_INTEGRITY_FAILED: u32 = RuntimeGuardError::StorageIntegrityFailed as u32;
+pub const ERR_UNKNOWN_FUNCTION: u32 = RuntimeGuardError::UnknownFunction as u32;
+pub const ERR_ARGUMENT_COUNT_MISMATCH: u32 = RuntimeGuardError::ArgumentCountMismatch as u32;
 
 mod event_fixtures {
     use soroban_sdk::{Env, Symbol};
@@ -203,17 +187,17 @@ impl RuntimeGuardWrapper {
 
     /// Validate that the function name is non-empty and within the allowed
     /// Symbol length (Soroban Symbols are capped at 32 characters).
-    fn validate_function_name(env: &Env, function_name: &Symbol) -> Result<(), Error> {
+    fn validate_function_name(env: &Env, function_name: &Symbol) -> Result<(), RuntimeGuardError> {
         // A valid function name Symbol must be non-zero when converted to a Val
         // payload — this catches default/zero Symbol values.
         let val: Val = function_name.clone().into_val(env);
         if val.get_payload() == 0 {
-            return Err(Error::from_contract_error(ERR_UNKNOWN_FUNCTION));
+            return Err(RuntimeGuardError::UnknownFunction);
         }
         Ok(())
     }
 
-    fn pre_execution_guards(env: Env) -> Result<(), Error> {
+    fn pre_execution_guards(env: Env) -> Result<(), RuntimeGuardError> {
         let wrapped = env
             .storage()
             .instance()
@@ -224,15 +208,15 @@ impl RuntimeGuardWrapper {
                 event_fixtures::EVENT_PRE_EXEC_GUARD,
                 event_fixtures::STATUS_WRAPPED_NOT_SET,
             );
-            return Err(Error::from_contract_error(ERR_WRAPPED_CONTRACT_NOT_SET));
+            return Err(RuntimeGuardError::WrappedContractNotSet);
         }
 
         Self::validate_storage_integrity(env)?;
         Ok(())
     }
 
-    fn post_execution_guards(env: Env) -> Result<(), Error> {
-        Self::verify_storage_invariants(env.clone())?;
+    fn post_execution_guards(env: Env) -> Result<(), RuntimeGuardError> {
+        Self::verify_storage_invariants(env.clone());
         Self::emit_guard_event(
             env,
             event_fixtures::EVENT_POST_EXEC_GUARD,
@@ -241,17 +225,17 @@ impl RuntimeGuardWrapper {
         Ok(())
     }
 
-    fn validate_storage_integrity(env: Env) -> Result<(), Error> {
+    fn validate_storage_integrity(env: Env) -> Result<(), RuntimeGuardError> {
         let instance_storage = env.storage().instance();
         let wrapped_addr: Option<Address> =
             instance_storage.get(&Symbol::new(&env, WRAPPED_CONTRACT_ADDRESS));
         if wrapped_addr.is_none() {
-            return Err(Error::from_contract_error(ERR_STORAGE_INTEGRITY_FAILED));
+            return Err(RuntimeGuardError::StorageIntegrityFailed);
         }
         Ok(())
     }
 
-    fn verify_storage_invariants(env: Env) -> Result<(), Error> {
+    fn verify_storage_invariants(env: Env) {
         let persistent = env.storage().persistent();
         let checked_count: u32 = persistent
             .get(&Symbol::new(&env, INVARIANTS_CHECKED))
@@ -260,25 +244,24 @@ impl RuntimeGuardWrapper {
             &Symbol::new(&env, INVARIANTS_CHECKED),
             &checked_count.saturating_add(1),
         );
-        Ok(())
     }
 
     fn execute_with_monitoring(
         env: Env,
         function_name: &Symbol,
         args: &Vec<Val>,
-    ) -> Result<Val, Error> {
+    ) -> Result<Val, RuntimeGuardError> {
         let expected_arg_count = match Self::expected_arg_count(&env, function_name) {
             Some(count) => count,
             None => {
                 Self::record_guard_failure(env.clone(), Symbol::new(&env, "missing_function"));
-                return Err(Error::from_contract_error(ERR_UNKNOWN_FUNCTION));
+                return Err(RuntimeGuardError::UnknownFunction);
             }
         };
 
         if args.len() != expected_arg_count {
             Self::record_guard_failure(env.clone(), Symbol::new(&env, "arg_mismatch"));
-            return Err(Error::from_contract_error(ERR_ARGUMENT_COUNT_MISMATCH));
+            return Err(RuntimeGuardError::ArgumentCountMismatch);
         }
 
         let start_tick = env.ledger().timestamp();
@@ -325,7 +308,7 @@ impl RuntimeGuardWrapper {
         env: Env,
         function_name: &Symbol,
         args: &Vec<Val>,
-    ) -> Result<Val, Error> {
+    ) -> Result<Val, RuntimeGuardError> {
         let ping = Symbol::new(&env, "ping");
         let echo = Symbol::new(&env, "echo");
         let sum = Symbol::new(&env, "sum");
@@ -338,13 +321,13 @@ impl RuntimeGuardWrapper {
         }
         if *function_name == sum {
             let left = u32::try_from_val(&env, &args.get(0).unwrap_or(Val::VOID.into()))
-                .map_err(|_| Error::from_contract_error(ERR_ARGUMENT_COUNT_MISMATCH))?;
+                .map_err(|_| RuntimeGuardError::ArgumentCountMismatch)?;
             let right = u32::try_from_val(&env, &args.get(1).unwrap_or(Val::VOID.into()))
-                .map_err(|_| Error::from_contract_error(ERR_ARGUMENT_COUNT_MISMATCH))?;
+                .map_err(|_| RuntimeGuardError::ArgumentCountMismatch)?;
             return Ok(left.saturating_add(right).into_val(&env));
         }
 
-        Err(Error::from_contract_error(ERR_UNKNOWN_FUNCTION))
+        Err(RuntimeGuardError::UnknownFunction)
     }
 
     fn log_execution(env: Env, function_name: &Symbol, _result: &Val) {

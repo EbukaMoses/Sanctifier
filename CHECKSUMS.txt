@@ -1,0 +1,6 @@
+# Sanctifier Artifact Checksums (SHA-256)
+# Generated on 2026-04-25T17:26:17Z
+
+432941f5159eefac437fa747a98e32acf9cd7c5060e1c5f9a43e9730584287a7  data/vulnerability-db.json
+3ac6107696411004f30d0b35c1e4c72fbf5ca71865209ec0fe1554666f58a1d0  schemas/analysis-output.json
+124d9b729a8f28186f0045e271b6c591c1ce941e1e7a0dd3cfd98ff721161302  schemas/sanctifier.json

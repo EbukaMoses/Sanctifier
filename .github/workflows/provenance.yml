@@ -1,0 +1,68 @@
+name: Supply-Chain Provenance
+
+on:
+  push:
+    branches: ["main"]
+    tags:
+      - "v*"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "data/vulnerability-db.json"
+      - "schemas/*.json"
+      - "scripts/verify-artifacts.sh"
+      - "scripts/generate-provenance.sh"
+
+jobs:
+  verify:
+    name: Verify Artifact Determinism
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify JSON formatting
+        run: ./scripts/verify-artifacts.sh --check
+
+      - name: Verify checksum manifest
+        run: |
+          if [ -f CHECKSUMS.txt ]; then
+            echo "Verifying existing manifest..."
+            # Skip the first few lines of comments and check hashes
+            grep -v '^#' CHECKSUMS.txt | shasum -a 256 -c
+          else
+            echo "No manifest found, skipping checksum verification."
+          fi
+
+  provenance:
+    name: Generate Provenance & Attestations
+    needs: verify
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate Checksums
+        run: ./scripts/generate-provenance.sh
+
+      - name: Attest DB and Schemas
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: |
+            data/vulnerability-db.json
+            schemas/analysis-output.json
+            schemas/sanctifier.json
+            CHECKSUMS.txt
+
+      - name: Commit manifest update
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add CHECKSUMS.txt
+          git commit -m "docs: update artifact checksums for ${{ github.ref_name }}" || echo "No changes to commit"
+          git push origin main
