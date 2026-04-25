@@ -88,8 +88,6 @@
 - Integration examples
 - Troubleshooting
 
-
-
 ### Sanctifier CLI Deploy Command
 
 **Location:** `tooling/sanctifier-cli/src/commands/deploy.rs`
@@ -134,6 +132,12 @@
 - Composite action for running `sanctifier analyze` in CI
 - Support matrix: `docs/github-action-support-matrix.md` (includes debug logging mode)
 - Threat model notes: `docs/github-action-threat-model.md`
+
+### Docs and Specs Maintenance
+
+- Docs/specs CI coverage: [docs/docs-specs-ci-coverage.md](docs/docs-specs-ci-coverage.md)
+- Troubleshooting guide boundaries: [docs/troubleshooting-guide.md](docs/troubleshooting-guide.md)
+- API reference generation: [docs/api-reference-generation.md](docs/api-reference-generation.md)
 
 ---
 
@@ -209,6 +213,7 @@
 
 | Document                                                                                         | Time   | Topics        |
 | ------------------------------------------------------------------------------------------------ | ------ | ------------- |
+| [docs/troubleshooting-guide.md](docs/troubleshooting-guide.md)                                   | 5 min  | Owner map     |
 | [SOROBAN_DEPLOYMENT.md#troubleshooting](SOROBAN_DEPLOYMENT.md#troubleshooting)                   | 15 min | Common issues |
 | [docs/ci-cd-setup.md#troubleshooting](docs/ci-cd-setup.md#troubleshooting)                       | 10 min | CI/CD issues  |
 | [GETTING_STARTED.md#troubleshooting-quick-links](GETTING_STARTED.md#troubleshooting-quick-links) | 5 min  | Quick answers |
@@ -257,6 +262,7 @@ See: [QUICK_START.md - Verification](QUICK_START.md#-check-results-1-min)
 
 - Support Matrix: [docs/github-action-support-matrix.md](docs/github-action-support-matrix.md)
 - Threat Model Notes: [docs/github-action-threat-model.md](docs/github-action-threat-model.md)
+- Docs/specs CI coverage: [docs/docs-specs-ci-coverage.md](docs/docs-specs-ci-coverage.md)
 - Action unit test fixtures: [tests/action/fixtures](tests/action/fixtures)
 - Vulnerability DB format and validation: [docs/vulnerability-database-format.md](docs/vulnerability-database-format.md)
 - Data + schemas performance budgets/benchmarks: [docs/data-schemas-performance.md](docs/data-schemas-performance.md)
