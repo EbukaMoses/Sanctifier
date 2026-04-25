@@ -137,6 +137,7 @@
 
 - Docs/specs CI coverage: [docs/docs-specs-ci-coverage.md](docs/docs-specs-ci-coverage.md)
 - Troubleshooting guide boundaries: [docs/troubleshooting-guide.md](docs/troubleshooting-guide.md)
+- Support/compatibility matrix: [docs/github-action-support-matrix.md](docs/github-action-support-matrix.md)
 - API reference generation: [docs/api-reference-generation.md](docs/api-reference-generation.md)
 
 ---

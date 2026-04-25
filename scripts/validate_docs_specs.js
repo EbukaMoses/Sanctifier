@@ -36,6 +36,7 @@ function assertDocumentedLinks() {
     "docs/docs-specs-ci-coverage.md",
     "docs/troubleshooting-guide.md",
     "docs/api-reference-generation.md",
+    "docs/github-action-support-matrix.md",
   ]) {
     assert(
       index.includes(target),
@@ -72,6 +73,8 @@ function assertOwnerDocs() {
     "docs/soroban-deployment.md",
     "docs/ci-cd-setup.md",
     "docs/QUICK_REFERENCE.md",
+    "docs/github-action-support-matrix.md",
+    "scripts/action_inputs.py",
     "specs/sep41_token_total_supply.tla",
     "## Integration/e2e coverage contract",
     "npm run docs:specs:check",
@@ -95,6 +98,70 @@ function assertOwnerDocs() {
     "## Contribution notes",
     "## Output stability",
   ]);
+
+  assertContains("docs/github-action-support-matrix.md", [
+    "# GitHub Action Support Matrix",
+    "## Supported runners",
+    "## Compatibility matrix",
+    "## Input validation and error messages",
+    "Invalid Input",
+    "Sanctifier action input error:",
+    'python -m unittest discover -s tests/action -p "test_*.py"',
+    "## Output stability",
+  ]);
+}
+
+function assertActionInputValidation() {
+  const action = read("action.yml");
+  for (const input of [
+    "path",
+    "version",
+    "min-severity",
+    "format",
+    "upload-sarif",
+    "sarif-output",
+    "debug",
+  ]) {
+    assert(
+      action.includes(`${input}:`),
+      `action.yml must define input ${input}`,
+    );
+  }
+
+  const helper = read("scripts/action_inputs.py");
+  for (const errorSnippet of [
+    "format must be one of",
+    "min-severity must be one of",
+    "must not be empty",
+    "must not contain control characters",
+    "must not start with '-'",
+    "must be relative to the checked-out repository",
+    "must not contain '..' path traversal segments",
+    "contains unsupported characters",
+    "does not exist in the checked-out repository",
+    "::error title=Invalid Input::Sanctifier action input error:",
+  ]) {
+    assert(
+      helper.includes(errorSnippet),
+      `scripts/action_inputs.py must keep validation error ${JSON.stringify(
+        errorSnippet,
+      )}`,
+    );
+  }
+
+  const tests = read("tests/action/test_action_inputs.py");
+  for (const testSnippet of [
+    "test_rejects_unknown_format",
+    "test_rejects_invalid_severity",
+    "test_rejects_missing_scan_path",
+    "test_rejects_path_traversal",
+    "test_main_reports_invalid_input_as_github_error",
+  ]) {
+    assert(
+      tests.includes(testSnippet),
+      `tests/action/test_action_inputs.py must cover ${testSnippet}`,
+    );
+  }
 }
 
 function assertSpecCoverage() {
@@ -117,7 +184,11 @@ for (const file of [
   "docs/soroban-deployment.md",
   "docs/ci-cd-setup.md",
   "docs/QUICK_REFERENCE.md",
+  "docs/github-action-support-matrix.md",
   "specs/sep41_token_total_supply.tla",
+  "action.yml",
+  "scripts/action_inputs.py",
+  "tests/action/test_action_inputs.py",
 ]) {
   assertFile(file);
 }
@@ -126,6 +197,7 @@ assertPackageScript();
 assertDocumentedLinks();
 assertWorkflowCoverage();
 assertOwnerDocs();
+assertActionInputValidation();
 assertSpecCoverage();
 
 console.log("docs/specs integration coverage passed");
