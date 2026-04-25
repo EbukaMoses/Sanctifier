@@ -359,6 +359,7 @@ See: [QUICK_START.md - Verification](QUICK_START.md#-check-results-1-min)
 
 - [Getting Started](docs/getting-started.md)
 - [Kani Integration](docs/kani-integration.md)
+- [Benchmark Methodology](specs/BENCHMARK_METHODOLOGY.md)
 - [Architecture Decisions](docs/adr/)
 
 ---
