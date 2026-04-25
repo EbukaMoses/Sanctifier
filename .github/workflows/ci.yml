@@ -159,6 +159,26 @@ jobs:
           path: frontend/coverage/
           retention-days: 7
 
+  docs-specs-integration:
+    name: Docs/specs integration coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate docs/specs coverage
+        run: npm run docs:specs:check
+
   contracts-sep41-fixtures:
     name: Contracts SEP-41 Fixture Coverage
     runs-on: ubuntu-latest
