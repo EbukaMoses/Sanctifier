@@ -148,7 +148,10 @@ fn ledger_size_analysis_is_deterministic() {
     let runs: Vec<_> = (0..10)
         .map(|_| a.analyze_ledger_size(CLEAN_SRC).len())
         .collect();
-    assert!(runs.windows(2).all(|w| w[0] == w[1]), "ledger size warning count must be stable");
+    assert!(
+        runs.windows(2).all(|w| w[0] == w[1]),
+        "ledger size warning count must be stable"
+    );
 }
 
 // ── Determinism: different sources → different findings ───────────────────────
@@ -220,15 +223,22 @@ fn concurrent_mixed_passes_do_not_panic() {
         .map(|i| {
             let a = Arc::clone(&analyzer);
             thread::spawn(move || match i % 3 {
-                0 => { a.scan_arithmetic_overflow(OVERFLOW_SRC); }
-                1 => { a.scan_auth_gaps(AUTH_GAP_SRC); }
-                _ => { a.scan_panics(PANIC_SRC); }
+                0 => {
+                    a.scan_arithmetic_overflow(OVERFLOW_SRC);
+                }
+                1 => {
+                    a.scan_auth_gaps(AUTH_GAP_SRC);
+                }
+                _ => {
+                    a.scan_panics(PANIC_SRC);
+                }
             })
         })
         .collect();
 
     for h in handles {
-        h.join().expect("no thread should panic during concurrent analysis");
+        h.join()
+            .expect("no thread should panic during concurrent analysis");
     }
 }
 
@@ -242,7 +252,11 @@ fn concurrent_scans_with_different_configs_do_not_interfere() {
 
     let handles: Vec<_> = (0..8)
         .map(|i| {
-            let a = if i % 2 == 0 { Arc::clone(&strict) } else { Arc::clone(&normal) };
+            let a = if i % 2 == 0 {
+                Arc::clone(&strict)
+            } else {
+                Arc::clone(&normal)
+            };
             thread::spawn(move || a.scan_arithmetic_overflow(OVERFLOW_SRC).len())
         })
         .collect();

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, Page, Route, ConsoleMessage } from "@playwright/test";
 
 /**
  * CSP Security Tests for WASM Integration.
@@ -8,9 +8,9 @@ import { test, expect } from "@playwright/test";
  */
 
 test.describe("WASM CSP Security", () => {
-  test("WASM module should initialize and run without 'unsafe-eval' CSP", async ({ page }: { page: any }) => {
+  test("WASM module should initialize and run without 'unsafe-eval' CSP", async ({ page }: { page: Page }) => {
     // 1. Intercept the request to inject a strict CSP header
-    await page.route("**/*", async (route: any) => {
+    await page.route("**/*", async (route: Route) => {
       const response = await route.fetch();
       const headers = {
         ...response.headers(),
@@ -29,7 +29,7 @@ test.describe("WASM CSP Security", () => {
     const result = await page.evaluate(async () => {
       try {
         // We use dynamic import to catch errors locally
-        // @ts-ignore - dynamic import of linked pkg
+        // @ts-expect-error - dynamic import of linked pkg
         const wasm = await import("@sanctifier/wasm");
         if (typeof wasm.version === 'function') {
            return { success: true, version: wasm.version() };
@@ -42,7 +42,7 @@ test.describe("WASM CSP Security", () => {
 
     // 4. Verify no CSP violations were logged to console
     const logs: string[] = [];
-    page.on("console", (msg: any) => {
+    page.on("console", (msg: ConsoleMessage) => {
       if (msg.type() === "error" && msg.text().includes("Content Security Policy")) {
         logs.push(msg.text());
       }

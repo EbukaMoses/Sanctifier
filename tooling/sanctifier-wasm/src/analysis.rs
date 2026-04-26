@@ -10,9 +10,7 @@ use sanctifier_core::{finding_codes, Analyzer, SanctifyConfig};
 
 use crate::constants::{CACHE_NAMESPACE, SCHEMA_VERSION};
 use crate::converters;
-use crate::types::{
-    AnalysisResult, Finding, ProgressEvent, ProgressiveAnalysisResult, Summary,
-};
+use crate::types::{AnalysisResult, Finding, ProgressEvent, ProgressiveAnalysisResult, Summary};
 
 // ── Progress phase table ───────────────────────────────────────────────────────
 

@@ -349,6 +349,8 @@ export async function POST(request: NextRequest) {
     if (report) {
       const findings: Finding[] = transformReport(normalizeReport(report));
       auditTotalFindings = findings.length;
+      auditHasCritical = findings.some((f) => f.severity === "critical");
+      auditHasHigh = findings.some((f) => f.severity === "high");
       return respond(findings);
     }
 

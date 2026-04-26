@@ -5,9 +5,9 @@
 //! [`ErrorResponse`](crate::types::ErrorResponse).
 
 use crate::constants::{
-    MAX_CONFIG_SIZE, MAX_SOURCE_SIZE, MEMORY_BUDGET_BYTES, MEMORY_OVERHEAD_FACTOR, MIN_SOURCE_SIZE,
-    MEMORY_BUDGET_BYTES_BROWSER, MEMORY_BUDGET_BYTES_NODE,
-    MAX_SOURCE_SIZE_BROWSER, MAX_SOURCE_SIZE_NODE,
+    MAX_CONFIG_SIZE, MAX_SOURCE_SIZE, MAX_SOURCE_SIZE_BROWSER, MAX_SOURCE_SIZE_NODE,
+    MEMORY_BUDGET_BYTES, MEMORY_BUDGET_BYTES_BROWSER, MEMORY_BUDGET_BYTES_NODE,
+    MEMORY_OVERHEAD_FACTOR, MIN_SOURCE_SIZE,
 };
 
 /// Deployment target for target-aware validation.
@@ -260,7 +260,10 @@ mod tests {
         let just_over = MEMORY_BUDGET_BYTES_BROWSER / MEMORY_OVERHEAD_FACTOR + 1;
         let source = "x".repeat(just_over);
         let err = validate_for_target(&source, WasmTarget::Browser).unwrap_err();
-        assert!(err.contains("browser"), "error should mention target: {err}");
+        assert!(
+            err.contains("browser"),
+            "error should mention target: {err}"
+        );
     }
 
     #[test]

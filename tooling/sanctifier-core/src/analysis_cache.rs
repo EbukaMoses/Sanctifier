@@ -192,15 +192,24 @@ mod tests {
                 vec![]
             });
         }
-        assert_eq!(called, 1, "compute must be called only once for identical source");
+        assert_eq!(
+            called, 1,
+            "compute must be called only once for identical source"
+        );
     }
 
     #[test]
     fn cache_miss_after_source_changes() {
         let mut cache: AnalysisCache<Vec<String>> = AnalysisCache::new(8);
         let mut called = 0usize;
-        cache.get_or_analyze("a.rs", "fn foo() {}", || { called += 1; vec![] });
-        cache.get_or_analyze("a.rs", "fn bar() {}", || { called += 1; vec![] });
+        cache.get_or_analyze("a.rs", "fn foo() {}", || {
+            called += 1;
+            vec![]
+        });
+        cache.get_or_analyze("a.rs", "fn bar() {}", || {
+            called += 1;
+            vec![]
+        });
         assert_eq!(called, 2, "changed source must trigger recompute");
     }
 
@@ -221,9 +230,18 @@ mod tests {
         let mut cache: AnalysisCache<Vec<String>> = AnalysisCache::new(8);
         let source = "fn foo() {}";
         let mut called = 0usize;
-        cache.get_or_analyze("a.rs", source, || { called += 1; vec![] });
-        assert!(cache.invalidate("a.rs"), "should return true when entry existed");
-        cache.get_or_analyze("a.rs", source, || { called += 1; vec![] });
+        cache.get_or_analyze("a.rs", source, || {
+            called += 1;
+            vec![]
+        });
+        assert!(
+            cache.invalidate("a.rs"),
+            "should return true when entry existed"
+        );
+        cache.get_or_analyze("a.rs", source, || {
+            called += 1;
+            vec![]
+        });
         assert_eq!(called, 2);
     }
 

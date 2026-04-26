@@ -112,7 +112,11 @@ fn migrate_rejects_wrong_from_version() {
     let result = client.migrate(&99u32);
 
     assert!(!result);
-    assert_eq!(client.get_version(), 1, "version must not change on failed migration");
+    assert_eq!(
+        client.get_version(),
+        1,
+        "version must not change on failed migration"
+    );
 }
 
 #[test]
@@ -124,7 +128,10 @@ fn migrate_cannot_be_replayed_after_success() {
     assert!(client.migrate(&1u32));
     let replay = client.migrate(&1u32);
 
-    assert!(!replay, "replaying an already-applied migration must return false");
+    assert!(
+        !replay,
+        "replaying an already-applied migration must return false"
+    );
     assert_eq!(client.get_version(), 2);
 }
 
@@ -152,7 +159,11 @@ fn version_survives_subsequent_add_liquidity_calls() {
 
     client.add_liquidity(&ta, &tb, &2_000u128, &4_500u128, &2_900u128);
 
-    assert_eq!(client.get_version(), 1, "version must not change across normal operations");
+    assert_eq!(
+        client.get_version(),
+        1,
+        "version must not change across normal operations"
+    );
 }
 
 #[test]

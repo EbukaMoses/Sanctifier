@@ -23,7 +23,7 @@ fn benchmark_smt_solver_latency() {
         .strategies
         .iter()
         .all(|s| s.max_micros >= s.min_micros));
-    
+
     // DX: Ensure it's not impossibly fast (sanity check)
     assert!(report.strategies.iter().any(|s| s.avg_micros > 0));
 
@@ -41,10 +41,13 @@ fn benchmark_smt_solver_latency() {
     let output_path = target_dir_path.join("smt-latency-report.json");
     let json = serde_json::to_string_pretty(&report).expect("benchmark report should serialize");
     fs::write(&output_path, json).expect("failed to write SMT latency benchmark report");
-    
+
     // Print summary to stdout for CI visibility
     println!("SMT Latency Benchmark Summary:");
     for s in &report.strategies {
-        println!("  {:?}: avg {}µs, p95 {}µs", s.strategy, s.avg_micros, s.p95_micros);
+        println!(
+            "  {:?}: avg {}µs, p95 {}µs",
+            s.strategy, s.avg_micros, s.p95_micros
+        );
     }
 }

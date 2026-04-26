@@ -58,7 +58,10 @@ fn execute_guarded_rejects_missing_function_name() {
 
     assert!(result.is_err());
     let err = result.unwrap_err().unwrap();
-    assert_eq!(err, soroban_sdk::Error::from_contract_error(ERR_UNKNOWN_FUNCTION));
+    assert_eq!(
+        err,
+        soroban_sdk::Error::from_contract_error(ERR_UNKNOWN_FUNCTION)
+    );
     assert_eq!(client.get_stats(), (0, 0, 0));
 }
 
@@ -73,7 +76,10 @@ fn execute_guarded_rejects_argument_count_mismatch() {
 
     assert!(result.is_err());
     let err = result.unwrap_err().unwrap();
-    assert_eq!(err, soroban_sdk::Error::from_contract_error(ERR_ARGUMENT_COUNT_MISMATCH));
+    assert_eq!(
+        err,
+        soroban_sdk::Error::from_contract_error(ERR_ARGUMENT_COUNT_MISMATCH)
+    );
     assert_eq!(client.get_stats(), (0, 0, 0));
 }
 
@@ -165,7 +171,10 @@ fn guard_wrapper_sample_ping_round_trip() {
 
     // invariants_checked incremented by post-execution guard.
     let (invariants_checked, call_log_len, failures) = client.get_stats();
-    assert_eq!(invariants_checked, 1, "post-guard must increment invariants_checked");
+    assert_eq!(
+        invariants_checked, 1,
+        "post-guard must increment invariants_checked"
+    );
     assert_eq!(call_log_len, 1, "call must be logged");
     assert_eq!(failures, 0, "no failures expected");
 }
@@ -216,7 +225,10 @@ fn guard_wrapper_sample_uninitialised_contract_returns_error() {
 
     assert!(result.is_err());
     let err = result.unwrap_err().unwrap();
-    assert_eq!(err, soroban_sdk::Error::from_contract_error(ERR_WRAPPED_CONTRACT_NOT_SET));
+    assert_eq!(
+        err,
+        soroban_sdk::Error::from_contract_error(ERR_WRAPPED_CONTRACT_NOT_SET)
+    );
 }
 
 /// Sample: sequential calls accumulate stats correctly.

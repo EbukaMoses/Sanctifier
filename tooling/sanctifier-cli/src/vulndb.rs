@@ -503,8 +503,7 @@ fn second() {
             .expect("Failed to write temp file");
         temp_file.flush().expect("Failed to flush");
 
-        let err =
-            VulnDatabase::load(temp_file.path()).expect_err("invalid severity should fail");
+        let err = VulnDatabase::load(temp_file.path()).expect_err("invalid severity should fail");
         assert!(err.to_string().contains("vulnerabilities[0].severity"));
         assert!(err.to_string().contains("urgent"));
     }
