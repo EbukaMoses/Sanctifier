@@ -1,5 +1,5 @@
 use crate::commands::analyze::{run_analysis, AnalyzeArgs};
-use notify_debouncer_mini::{new_debouncer, notify::*, DebounceEventResult};
+use notify_debouncer_mini::{new_debouncer, notify::*};
 use std::sync::mpsc::channel;
 use std::time::Duration;
 

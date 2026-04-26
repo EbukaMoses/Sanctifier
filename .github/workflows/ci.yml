@@ -143,7 +143,7 @@ jobs:
           echo 'module.exports = {};' > tooling/sanctifier-wasm/pkg/index.js
 
       - name: Install frontend dependencies
-        run: cd frontend && npm ci && npm rebuild
+        run: cd frontend && npm install
 
       - name: Run unit tests
         run: cd frontend && npm test
@@ -223,7 +223,7 @@ jobs:
           echo 'module.exports = {};' > tooling/sanctifier-wasm/pkg/index.js
 
       - name: Install frontend dependencies
-        run: cd frontend && npm ci && npm rebuild
+        run: cd frontend && npm install
 
       - name: Install Playwright browsers
         run: cd frontend && npx playwright install --with-deps chromium
@@ -263,7 +263,7 @@ jobs:
           echo 'module.exports = {};' > tooling/sanctifier-wasm/pkg/index.js
 
       - name: Install frontend dependencies
-        run: cd frontend && npm ci && npm rebuild
+        run: cd frontend && npm install
 
       - name: Install Playwright browsers
         run: cd frontend && npx playwright install --with-deps chromium
