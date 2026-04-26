@@ -9,6 +9,9 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
 
+[dev-dependencies]
+proptest = "1.4"
+
 [profile.release]
 opt-level = "z"
 overflow-checks = true

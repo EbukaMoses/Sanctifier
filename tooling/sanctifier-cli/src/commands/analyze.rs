@@ -7,6 +7,8 @@ use colored::*;
 use rayon::prelude::*;
 use sanctifier_core::finding_codes;
 use sanctifier_core::{Analyzer, SanctifyConfig};
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{
@@ -14,8 +16,6 @@ use std::sync::{
     Arc, Mutex,
 };
 use std::time::{Duration, Instant};
-use sha2::{Digest, Sha256};
-use std::collections::HashMap;
 use tracing::{debug, error, info, warn};
 
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -111,6 +111,15 @@ pub(crate) struct FileAnalysisResult {
 // ── Entry point ──────────────────────────────────────────────────────────────
 
 pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
+    let should_exit_on_findings = args.exit_code;
+    let found_issues = run_analysis(args)?;
+    if found_issues && should_exit_on_findings {
+        std::process::exit(1);
+    }
+    Ok(())
+}
+
+pub fn run_analysis(args: AnalyzeArgs) -> anyhow::Result<bool> {
     let mut path = args.path.clone();
 
     #[cfg(not(windows))]
@@ -139,7 +148,7 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
                 "Invalid Soroban project: missing Cargo.toml with a soroban-sdk dependency"
             );
         }
-        std::process::exit(2);
+        anyhow::bail!("{:?} is not a valid Soroban project", path);
     }
 
     info!(target: "sanctifier", path = %path.display(), "Valid Soroban project found");
@@ -384,6 +393,7 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
 
     let timestamp = chrono_timestamp();
     let _duration_ms = start.elapsed().as_millis() as u64;
+    let duration_ms = _duration_ms;
 
     let webhook_payload = ScanWebhookPayload {
         event: "scan.completed",
@@ -398,8 +408,6 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
     if let Err(err) = send_scan_completed_webhooks(&args.webhook_urls, &webhook_payload) {
         warn!(target: "sanctifier", error = %err, "Failed to initialize webhook client");
     }
-
-
 
     if is_json {
         let report = serde_json::json!({
@@ -456,10 +464,7 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
             },
         });
         println!("{}", serde_json::to_string_pretty(&report)?);
-        if should_exit_with_1 {
-            std::process::exit(1);
-        }
-        return Ok(());
+        return Ok(should_exit_with_1);
     }
 
     // ── Text output ──────────────────────────────────────────────────────────
@@ -608,11 +613,7 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
     } else {
         println!("\n{} Found Variable Shadowing issues!", "⚠️".yellow());
         for violation in &variable_shadowing_violations {
-            println!(
-                "   {} [S006] {}",
-                "->".red(),
-                violation.message.bold()
-            );
+            println!("   {} [S006] {}", "->".red(), violation.message.bold());
             println!("      Location: {}", violation.location);
             if let Some(suggestion) = &violation.suggestion {
                 println!("      Suggestion: {}", suggestion);
@@ -729,10 +730,7 @@ pub fn exec(args: AnalyzeArgs) -> anyhow::Result<()> {
         reanalysed_count.to_string().bold(),
         duration_ms
     );
-    if should_exit_with_1 {
-        std::process::exit(1);
-    }
-    Ok(())
+    Ok(should_exit_with_1)
 }
 
 // ── Analyse one file ─────────────────────────────────────────────────────────
@@ -837,28 +835,37 @@ pub(crate) fn analyze_single_file(
     let mut ci = analyzer.scan_contractimports(content);
     for i in &mut ci {
         i.location = format!("{}:{}", file_name, i.location);
-        
+
         // Stale WASM check heuristic:
         // Attempt to find the full path of the WASM file relative to the file doing the import.
         let mut base_dir = PathBuf::from(file_name);
         base_dir.pop();
         let wasm_file_path = base_dir.join(&i.wasm_path);
-        
+
         if !wasm_file_path.exists() {
-            i.message = format!("The imported WASM file does not exist: {}", wasm_file_path.display());
+            i.message = format!(
+                "The imported WASM file does not exist: {}",
+                wasm_file_path.display()
+            );
         } else {
             // Find modification time of the WASM
             if let Ok(wasm_meta) = std::fs::metadata(&wasm_file_path) {
                 if let Ok(wasm_mtime) = wasm_meta.modified() {
-                    let wasm_stem = wasm_file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+                    let wasm_stem = wasm_file_path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("");
                     let mut found_newer_rs = false;
                     let mut newest_rs_path = String::new();
-                    
+
                     // Simple heuristic: look for any .rs file in the workspace containing the stem
                     // If a matching .rs file is newer than the wasm, it's considered stale.
                     let workspace_root = PathBuf::from(".");
-                    let rs_files = crate::commands::analyze::collect_rs_files(&workspace_root, &analyzer.config.ignore_paths);
-                    
+                    let rs_files = crate::commands::analyze::collect_rs_files(
+                        &workspace_root,
+                        &analyzer.config.ignore_paths,
+                    );
+
                     for rs_f in rs_files {
                         let path_str = rs_f.display().to_string();
                         // Strip hyphens and underscores for loose matching e.g. "my-contract" vs "my_contract"
@@ -876,7 +883,7 @@ pub(crate) fn analyze_single_file(
                             }
                         }
                     }
-                    
+
                     if found_newer_rs {
                         i.message = format!("The imported WASM appears older than its corresponding workspace source file: {}. Rebuild the contract.", newest_rs_path);
                     } else {
@@ -1039,4 +1046,3 @@ impl AnalysisCache {
         self.entries.insert(file_path, CacheEntry { hash, result });
     }
 }
-

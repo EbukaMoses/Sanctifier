@@ -122,6 +122,16 @@ See `BRANCH_PROTECTION.md` for details.
 - Use `cargo fmt --all` for formatting.
 - Use `cargo clippy` for lint checks.
 
+## Supply-Chain Security
+
+Sanctifier ensures the integrity of its vulnerability database and JSON schemas:
+
+- **Deterministic Formatting**: All JSON artifacts in `data/` and `schemas/` must be pretty-printed. Run `./scripts/verify-artifacts.sh` to fix formatting.
+- **Provenance Manifest**: A `CHECKSUMS.txt` file tracks SHA-256 hashes of critical artifacts.
+- **Artifact Attestations**: Official releases include GitHub Artifact Attestations (SLSA-aligned) to prevent tampering.
+
+Contributors should ensure that any changes to `data/` or `schemas/` are correctly formatted and that `CHECKSUMS.txt` is updated if required.
+
 ## QA checklist
 
 - [ ] Branch created for specific issue

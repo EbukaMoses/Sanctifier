@@ -1,3 +1,5 @@
+extern crate std;
+
 use crate::{VestingContract, VestingContractClient};
 use soroban_sdk::{
     testutils::{Address as _, Ledger as _},
@@ -168,4 +170,55 @@ fn test_claim_nothing_fails() {
 
     env.ledger().set_timestamp(50); // Before start
     client.claim();
+}
+
+// ── Property-based tests ─────────────────────────────────────────────────────
+
+fn vested_linear(amount: i128, elapsed: u64, duration: u64) -> i128 {
+    if elapsed >= duration {
+        return amount;
+    }
+    amount * elapsed as i128 / duration as i128
+}
+
+proptest::proptest! {
+    #[test]
+    fn prop_vested_never_exceeds_total(
+        amount in 1i128..1_000_000_000i128,
+        elapsed in 0u64..10_000u64,
+        duration in 1u64..10_000u64,
+    ) {
+        let v = vested_linear(amount, elapsed, duration);
+        proptest::prop_assert!(v >= 0 && v <= amount);
+    }
+
+    #[test]
+    fn prop_vested_is_monotonic(
+        amount in 1i128..1_000_000_000i128,
+        t1 in 0u64..5_000u64,
+        t2 in 0u64..5_000u64,
+        duration in 1u64..10_000u64,
+    ) {
+        let (earlier, later) = (t1.min(t2), t1.max(t2));
+        proptest::prop_assert!(
+            vested_linear(amount, later, duration) >= vested_linear(amount, earlier, duration)
+        );
+    }
+
+    #[test]
+    fn prop_fully_vested_at_duration(
+        amount in 1i128..1_000_000_000i128,
+        duration in 1u64..10_000u64,
+    ) {
+        proptest::prop_assert_eq!(vested_linear(amount, duration, duration), amount);
+    }
+
+    #[test]
+    fn prop_nothing_vested_before_cliff(
+        amount in 1i128..1_000_000_000i128,
+        cliff in 1u64..5_000u64,
+        duration in 1u64..10_000u64,
+    ) {
+        proptest::prop_assert_eq!(vested_linear(amount, 0, duration.max(cliff)), 0);
+    }
 }

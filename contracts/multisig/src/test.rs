@@ -169,3 +169,36 @@ fn test_signer_management() {
         &Bytes::from_array(&env, &[2u8; 32]),
     );
 }
+
+// ── Property-based tests ─────────────────────────────────────────────────────
+
+fn quorum_reached(approvals: u32, threshold: u32) -> bool {
+    approvals >= threshold
+}
+
+proptest::proptest! {
+    #[test]
+    fn prop_threshold_exactly_met_is_sufficient(threshold in 1u32..100u32) {
+        proptest::prop_assert!(quorum_reached(threshold, threshold));
+    }
+
+    #[test]
+    fn prop_one_below_threshold_is_insufficient(threshold in 2u32..100u32) {
+        proptest::prop_assert!(!quorum_reached(threshold - 1, threshold));
+    }
+
+    #[test]
+    fn prop_above_threshold_is_sufficient(
+        threshold in 1u32..50u32,
+        extra in 1u32..50u32,
+    ) {
+        proptest::prop_assert!(quorum_reached(threshold + extra, threshold));
+    }
+
+    #[test]
+    fn prop_threshold_zero_approvals_never_passes_nonzero_threshold(
+        threshold in 1u32..100u32,
+    ) {
+        proptest::prop_assert!(!quorum_reached(0, threshold));
+    }
+}

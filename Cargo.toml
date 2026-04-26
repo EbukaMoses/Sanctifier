@@ -10,9 +10,7 @@ members = [
     "contracts/runtime-guard-wrapper",
     "contracts/kani-poc",
     "contracts/my-contract",
-    "contracts/bridge",
-    "contracts/oracle",
-    "contracts/unsafe-prng-example",
+
 ]
 resolver = "2"
 

@@ -1,8 +1,7 @@
 #![recursion_limit = "512"]
 
 use clap::{Parser, Subcommand};
-use colored::*;
-use sanctifier_core::{callgraph_to_dot, Analyzer, SanctifyConfig};
+use sanctifier_core::SanctifyConfig;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tracing::error;
@@ -13,7 +12,7 @@ pub mod vulndb;
 
 #[derive(Parser)]
 #[command(name = "sanctifier")]
-#[command(about = "Stellar Soroban Security & Formal Verification Suite", long_about = None)]
+#[command(version, about = "Stellar Soroban Security & Formal Verification Suite", long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -41,10 +40,16 @@ pub enum Commands {
         #[arg(default_value = ".")]
         path: PathBuf,
 
+        /// Output format: text | json | junit
+        #[arg(short, long, default_value = "text")]
+        format: String,
+
         /// Output DOT file path
         #[arg(short, long, default_value = "callgraph.dot")]
         output: PathBuf,
     },
+    /// Apply auto-fix patches to a contract; use --interactive to review each patch
+    Fix(commands::fix::FixArgs),
     /// Check for and download the latest Sanctifier binary
     Update,
     /// Detect reentrancy vulnerabilities (state mutation before external call)
@@ -53,6 +58,8 @@ pub enum Commands {
     Verify(commands::verify::VerifyArgs),
     /// Analyze an entire Cargo workspace (multiple contracts/libs)
     Workspace(commands::workspace::WorkspaceArgs),
+    /// Watch for file changes and auto-rerun analysis
+    Watch(commands::watch::WatchArgs),
 }
 
 fn main() {
@@ -93,9 +100,15 @@ fn run() -> anyhow::Result<()> {
             let path = Some(args.path.clone());
             commands::init::exec(args, path)?;
         }
-        Commands::Callgraph { path, output } => {
+        Commands::Callgraph {
+            path,
+            format,
+            output,
+        } => {
+            use sanctifier_core::{callgraph_to_dot, Analyzer};
             let config = load_config(&path);
             let analyzer = Analyzer::new(config.clone());
+            let is_json = format == "json";
 
             let mut rs_files: Vec<PathBuf> = Vec::new();
             if path.is_dir() {
@@ -109,39 +122,45 @@ fn run() -> anyhow::Result<()> {
                 if f.extension().and_then(|s| s.to_str()) != Some("rs") {
                     continue;
                 }
-
                 let content = match fs::read_to_string(&f) {
                     Ok(c) => c,
                     Err(_) => continue,
                 };
-
                 let caller = infer_contract_name(&content).unwrap_or_else(|| {
                     f.file_stem()
                         .and_then(|s| s.to_str())
                         .unwrap_or("<unknown>")
                         .to_string()
                 });
-
                 let file_label = f.display().to_string();
                 edges.extend(analyzer.scan_invoke_contract_calls(&content, &caller, &file_label));
             }
 
-            let dot = callgraph_to_dot(&edges);
-            if let Err(e) = fs::write(&output, dot) {
-                error!(
-                    target: "sanctifier",
-                    output = %output.display(),
-                    error = %e,
-                    "Failed to write DOT file"
+            if is_json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&edges).unwrap_or_else(|_| "[]".to_string())
                 );
-                std::process::exit(1);
+            } else {
+                let dot = callgraph_to_dot(&edges);
+                if let Err(e) = fs::write(&output, dot) {
+                    error!(
+                        target: "sanctifier",
+                        output = %output.display(),
+                        error = %e,
+                        "Failed to write DOT file"
+                    );
+                    std::process::exit(1);
+                }
+                println!(
+                    "✅ Wrote call graph to {:?} ({} edges)",
+                    output,
+                    edges.len()
+                );
             }
-            println!(
-                "{} Wrote call graph to {:?} ({} edges)",
-                "✅".green(),
-                output,
-                edges.len()
-            );
+        }
+        Commands::Fix(args) => {
+            commands::fix::exec(args)?;
         }
         Commands::Update => {
             commands::update::exec()?;
@@ -154,6 +173,9 @@ fn run() -> anyhow::Result<()> {
         }
         Commands::Workspace(args) => {
             commands::workspace::exec(args)?;
+        }
+        Commands::Watch(args) => {
+            commands::watch::exec(args)?;
         }
     }
 
