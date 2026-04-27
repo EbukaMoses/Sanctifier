@@ -13,6 +13,9 @@ members = [
     "contracts/runtime-guard-wrapper",
     "contracts/kani-poc",
     "contracts/my-contract",
+    "contracts/flashloan-token",
+    "contracts/proxy",
+    "contracts/vesting",
 
 ]
 resolver = "2"

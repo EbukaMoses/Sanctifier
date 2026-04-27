@@ -23,8 +23,7 @@
 //! | `TOTAL_LOANS`  | `u32`     | Persistent | Total number of flashloans      |
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short, token, Address, Bytes, Env, IntoVal,
-    Symbol,
+    contract, contractimpl, contracttype, symbol_short, token, Address, Bytes, Env, IntoVal, Symbol,
 };
 
 // ── Storage keys ────────────────────────────────────────────────────────────────
@@ -90,20 +89,15 @@ impl FlashloanToken {
         Self::require_admin(&env);
         assert!(new_fee_bps <= MAX_FEE_BPS, "fee exceeds maximum");
         env.storage().instance().set(&FEE_BPS, &new_fee_bps);
-        env.events().publish(
-            (symbol_short!("set_fee"),),
-            new_fee_bps,
-        );
+        env.events()
+            .publish((symbol_short!("set_fee"),), new_fee_bps);
     }
 
     /// Pause / unpause the contract. Only callable by admin.
     pub fn set_paused(env: Env, paused: bool) {
         Self::require_admin(&env);
         env.storage().instance().set(&PAUSED, &paused);
-        env.events().publish(
-            (symbol_short!("paused"),),
-            paused,
-        );
+        env.events().publish((symbol_short!("paused"),), paused);
     }
 
     // ── Core flashloan logic ───────────────────────────────────────────────────
@@ -135,10 +129,7 @@ impl FlashloanToken {
             .instance()
             .get(&FEE_BPS)
             .unwrap_or(DEFAULT_FEE_BPS);
-        let fee: i128 = amount
-            .checked_mul(fee_bps as i128)
-            .expect("fee overflow")
-            / BPS_DENOM;
+        let fee: i128 = amount.checked_mul(fee_bps as i128).expect("fee overflow") / BPS_DENOM;
 
         let token_client = token::Client::new(&env, &token_address);
         let contract_address = env.current_contract_address();
@@ -164,9 +155,7 @@ impl FlashloanToken {
 
         // Verify repayment
         let balance_after = token_client.balance(&contract_address);
-        let required_repayment = balance_before
-            .checked_add(fee)
-            .expect("repayment overflow");
+        let required_repayment = balance_before.checked_add(fee).expect("repayment overflow");
 
         assert!(
             balance_after >= required_repayment,
@@ -177,20 +166,12 @@ impl FlashloanToken {
 
         // Accounting
         let collected_fee = balance_after - balance_before;
-        let prev_fees: i128 = env
-            .storage()
-            .persistent()
-            .get(&TOTAL_FEES)
-            .unwrap_or(0);
+        let prev_fees: i128 = env.storage().persistent().get(&TOTAL_FEES).unwrap_or(0);
         env.storage()
             .persistent()
             .set(&TOTAL_FEES, &prev_fees.saturating_add(collected_fee));
 
-        let prev_loans: u32 = env
-            .storage()
-            .persistent()
-            .get(&TOTAL_LOANS)
-            .unwrap_or(0);
+        let prev_loans: u32 = env.storage().persistent().get(&TOTAL_LOANS).unwrap_or(0);
         env.storage()
             .persistent()
             .set(&TOTAL_LOANS, &prev_loans.saturating_add(1));
@@ -216,24 +197,13 @@ impl FlashloanToken {
 
     /// Returns whether the contract is paused.
     pub fn is_paused(env: Env) -> bool {
-        env.storage()
-            .instance()
-            .get(&PAUSED)
-            .unwrap_or(false)
+        env.storage().instance().get(&PAUSED).unwrap_or(false)
     }
 
     /// Returns `(total_fees_collected, total_loans_count)`.
     pub fn stats(env: Env) -> (i128, u32) {
-        let fees: i128 = env
-            .storage()
-            .persistent()
-            .get(&TOTAL_FEES)
-            .unwrap_or(0);
-        let loans: u32 = env
-            .storage()
-            .persistent()
-            .get(&TOTAL_LOANS)
-            .unwrap_or(0);
+        let fees: i128 = env.storage().persistent().get(&TOTAL_FEES).unwrap_or(0);
+        let loans: u32 = env.storage().persistent().get(&TOTAL_LOANS).unwrap_or(0);
         (fees, loans)
     }
 
@@ -249,20 +219,12 @@ impl FlashloanToken {
     }
 
     fn assert_not_paused(env: &Env) {
-        let paused: bool = env
-            .storage()
-            .instance()
-            .get(&PAUSED)
-            .unwrap_or(false);
+        let paused: bool = env.storage().instance().get(&PAUSED).unwrap_or(false);
         assert!(!paused, "contract is paused");
     }
 
     fn acquire_lock(env: &Env) {
-        let locked: bool = env
-            .storage()
-            .instance()
-            .get(&FL_LOCK)
-            .unwrap_or(false);
+        let locked: bool = env.storage().instance().get(&FL_LOCK).unwrap_or(false);
         assert!(!locked, "re-entrancy detected");
         env.storage().instance().set(&FL_LOCK, &true);
     }

@@ -249,10 +249,8 @@ mod tests {
 
     #[test]
     fn target_node_memory_budget_is_higher_than_browser() {
-        assert!(
-            MEMORY_BUDGET_BYTES_NODE > MEMORY_BUDGET_BYTES_BROWSER,
-            "node budget must exceed browser budget"
-        );
+        // Compile-time check: node budget must exceed browser budget
+        const _: () = assert!(MEMORY_BUDGET_BYTES_NODE > MEMORY_BUDGET_BYTES_BROWSER);
     }
 
     #[test]
