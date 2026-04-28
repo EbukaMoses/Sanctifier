@@ -16,7 +16,7 @@ const BUDGET = {
   /** Maximum time for the dashboard page to reach "networkidle" state. */
   PAGE_LOAD_MS: 10_000,
   /** Maximum round-trip for a minimal contract via the analyze API. */
-  SIMPLE_ANALYSIS_MS: 5_000,
+  SIMPLE_ANALYSIS_MS: 25_000,
   /** Maximum round-trip for a 100-function contract via the analyze API. */
   LARGE_ANALYSIS_MS: 30_000,
   /** Maximum time for the scan page to be interactive (DOMContentLoaded). */

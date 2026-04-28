@@ -42,11 +42,11 @@
 //! - Monitor for unusual proposal patterns or rapid approvals
 #![no_std]
 
+use security_disclaimers::{DisclaimerCategory, SecurityLevel};
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, xdr::ToXdr, Address, Bytes,
     Env, IntoVal, Symbol, Val, Vec,
 };
-use security_disclaimers::{SecurityLevel, DisclaimerCategory, SecurityDisclaimer};
 
 #[cfg(test)]
 mod test;
@@ -103,13 +103,17 @@ pub struct MultisigWallet;
 impl MultisigWallet {
     /// Get security disclaimer for this contract
     pub fn get_security_disclaimer(env: Env, category: DisclaimerCategory) -> soroban_sdk::String {
-        let disclaimer = SecurityDisclaimer::get_disclaimer(env.clone(), SecurityLevel::Critical, category);
-        soroban_sdk::String::from_str(&env, &disclaimer)
+        security_disclaimers::get_disclaimer(env.clone(), SecurityLevel::Critical, category)
     }
 
     /// Validate security configuration
     pub fn validate_security_config(env: Env, has_admin: bool, has_upgrade: bool) -> bool {
-        SecurityDisclaimer::validate_security_config(env, SecurityLevel::Critical, has_admin, has_upgrade)
+        security_disclaimers::validate_security_config(
+            env,
+            SecurityLevel::Critical,
+            has_admin,
+            has_upgrade,
+        )
     }
 
     /// Initialize the multisig wallet with a list of signers and a threshold.

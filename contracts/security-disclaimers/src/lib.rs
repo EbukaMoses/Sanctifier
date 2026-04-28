@@ -34,9 +34,8 @@
 #![no_std]
 
 extern crate alloc;
-use alloc::string::String;
 
-use soroban_sdk::{contract, contractimpl, contracttype, Env};
+use soroban_sdk::{contracttype, Env};
 
 /// Security classification levels for contracts
 #[contracttype]
@@ -65,122 +64,135 @@ pub enum DisclaimerCategory {
 }
 
 /// Standard security disclaimer messages
-pub const DISCLAIMER_AUDIT_REQUIRED: &str = 
+pub const DISCLAIMER_AUDIT_REQUIRED: &str =
     "⚠️  SECURITY WARNING: This contract has not been audited. Use at your own risk. \
      Deploy only after thorough testing and security review.";
 
-pub const DISCLAIMER_PRODUCTION_USE: &str = 
+pub const DISCLAIMER_PRODUCTION_USE: &str =
     "⚠️  PRODUCTION WARNING: This contract is intended for testing purposes only. \
      Do not use in production without security audit and formal verification.";
 
-pub const DISCLAIMER_UPGRADE_RISK: &str = 
+pub const DISCLAIMER_UPGRADE_RISK: &str =
     "⚠️  UPGRADE WARNING: Contract upgrades may introduce security vulnerabilities. \
      Always verify upgrade logic and test thoroughly before deployment.";
 
-pub const DISCLAIMER_ACCESS_CONTROL: &str = 
+pub const DISCLAIMER_ACCESS_CONTROL: &str =
     "⚠️  ACCESS CONTROL WARNING: Improper configuration of access controls may lead to \
      unauthorized access or fund loss. Review permissions carefully.";
 
-pub const DISCLAIMER_TIME_SENSITIVE: &str = 
+pub const DISCLAIMER_TIME_SENSITIVE: &str =
     "⚠️  TIME-SENSITIVE WARNING: This contract depends on timing assumptions. \
      Network delays or clock variations may affect behavior.";
 
-pub const DISCLAIMER_ORACLE_DEPENDENCY: &str = 
+pub const DISCLAIMER_ORACLE_DEPENDENCY: &str =
     "⚠️  ORACLE WARNING: This contract depends on external price feeds. \
      Oracle manipulation or delays may impact contract behavior.";
 
-pub const DISCLAIMER_COMPLEX_LOGIC: &str = 
+pub const DISCLAIMER_COMPLEX_LOGIC: &str =
     "⚠️  COMPLEXITY WARNING: This contract contains complex logic that may have \
      edge cases. Comprehensive testing and formal verification recommended.";
 
-/// Security disclaimer manager
-#[contract]
-pub struct SecurityDisclaimer;
-
-#[contractimpl]
-impl SecurityDisclaimer {
-    /// Get the security disclaimer for a contract
-    /// 
-    /// # Arguments
-    /// * `level` - Security level of the contract
-    /// * `category` - Type of disclaimer needed
-    /// 
-    /// # Returns
-    /// String containing the appropriate disclaimer
-    pub fn get_disclaimer(_env: Env, level: SecurityLevel, category: DisclaimerCategory) -> String {
-        match (level, category) {
-            (SecurityLevel::Critical, DisclaimerCategory::Audit) => {
-                String::from(DISCLAIMER_AUDIT_REQUIRED) + " CRITICAL: Formal verification required."
-            }
-            (SecurityLevel::High, DisclaimerCategory::Audit) => {
-                String::from(DISCLAIMER_AUDIT_REQUIRED) + " HIGH: Professional audit strongly recommended."
-            }
-            (SecurityLevel::Medium, DisclaimerCategory::Audit) => {
-                String::from(DISCLAIMER_AUDIT_REQUIRED) + " MEDIUM: Security review recommended."
-            }
-            (SecurityLevel::Low, DisclaimerCategory::Audit) => {
-                String::from(DISCLAIMER_AUDIT_REQUIRED)
-            }
-            (SecurityLevel::Critical, DisclaimerCategory::Usage) => {
-                String::from(DISCLAIMER_PRODUCTION_USE) + " CRITICAL: Extensive testing required."
-            }
-            (SecurityLevel::High, DisclaimerCategory::Usage) => {
-                String::from(DISCLAIMER_PRODUCTION_USE) + " HIGH: Comprehensive testing required."
-            }
-            (SecurityLevel::Medium, DisclaimerCategory::Usage) => {
-                String::from(DISCLAIMER_PRODUCTION_USE) + " MEDIUM: Basic testing required."
-            }
-            (SecurityLevel::Low, DisclaimerCategory::Usage) => {
-                String::from(DISCLAIMER_PRODUCTION_USE)
-            }
-            (SecurityLevel::Critical, DisclaimerCategory::Upgrade) => {
-                String::from(DISCLAIMER_UPGRADE_RISK) + " CRITICAL: Upgrade requires governance approval."
-            }
-            (SecurityLevel::High, DisclaimerCategory::Upgrade) => {
-                String::from(DISCLAIMER_UPGRADE_RISK) + " HIGH: Upgrade requires multi-signature approval."
-            }
-            (SecurityLevel::Medium, DisclaimerCategory::Upgrade) => {
-                String::from(DISCLAIMER_UPGRADE_RISK)
-            }
-            (SecurityLevel::Low, DisclaimerCategory::Upgrade) => {
-                String::from("⚠️  UPGRADE INFO: This contract supports upgrades. Verify logic before deployment.")
-            }
-            (_, DisclaimerCategory::Emergency) => {
-                String::from("⚠️  EMERGENCY: In case of security incident, contact development team immediately.")
-            }
+/// Get the security disclaimer for a contract
+///
+/// # Arguments
+/// * `env` - Soroban environment
+/// * `level` - Security level of the contract
+/// * `category` - Type of disclaimer needed
+///
+/// # Returns
+/// String containing the appropriate disclaimer
+pub fn get_disclaimer(
+    env: Env,
+    level: SecurityLevel,
+    category: DisclaimerCategory,
+) -> soroban_sdk::String {
+    match (level, category) {
+        (SecurityLevel::Critical, DisclaimerCategory::Audit) => {
+            soroban_sdk::String::from_str(&env, "⚠️  SECURITY WARNING: This contract has not been audited. Use at your own risk. Deploy only after thorough testing and security review. CRITICAL: Formal verification required.")
+        }
+        (SecurityLevel::High, DisclaimerCategory::Audit) => {
+            soroban_sdk::String::from_str(&env, "⚠️  SECURITY WARNING: This contract has not been audited. Use at your own risk. Deploy only after thorough testing and security review. HIGH: Professional audit strongly recommended.")
+        }
+        (SecurityLevel::Medium, DisclaimerCategory::Audit) => {
+            soroban_sdk::String::from_str(&env, "⚠️  SECURITY WARNING: This contract has not been audited. Use at your own risk. Deploy only after thorough testing and security review. MEDIUM: Security review recommended.")
+        }
+        (SecurityLevel::Low, DisclaimerCategory::Audit) => {
+            soroban_sdk::String::from_str(&env, "⚠️  SECURITY WARNING: This contract has not been audited. Use at your own risk. Deploy only after thorough testing and security review.")
+        }
+        (SecurityLevel::Critical, DisclaimerCategory::Usage) => {
+            soroban_sdk::String::from_str(&env, "⚠️  PRODUCTION WARNING: This contract is intended for testing purposes only. Do not use in production without security audit and formal verification. CRITICAL: Extensive testing required.")
+        }
+        (SecurityLevel::High, DisclaimerCategory::Usage) => {
+            soroban_sdk::String::from_str(&env, "⚠️  PRODUCTION WARNING: This contract is intended for testing purposes only. Do not use in production without security audit and formal verification. HIGH: Comprehensive testing required.")
+        }
+        (SecurityLevel::Medium, DisclaimerCategory::Usage) => {
+            soroban_sdk::String::from_str(&env, "⚠️  PRODUCTION WARNING: This contract is intended for testing purposes only. Do not use in production without security audit and formal verification. MEDIUM: Thorough testing recommended.")
+        }
+        (SecurityLevel::Low, DisclaimerCategory::Usage) => {
+            soroban_sdk::String::from_str(&env, "⚠️  PRODUCTION WARNING: This contract is intended for testing purposes only. Do not use in production without security audit and formal verification.")
+        }
+        (SecurityLevel::Critical, DisclaimerCategory::Upgrade) => {
+            soroban_sdk::String::from_str(&env, "⚠️  UPGRADE WARNING: Contract upgrades may introduce security vulnerabilities. Always verify upgrade logic and test thoroughly before deployment. CRITICAL: Upgrade requires governance approval.")
+        }
+        (SecurityLevel::High, DisclaimerCategory::Upgrade) => {
+            soroban_sdk::String::from_str(&env, "⚠️  UPGRADE WARNING: Contract upgrades may introduce security vulnerabilities. Always verify upgrade logic and test thoroughly before deployment. HIGH: Upgrade requires multi-signature approval.")
+        }
+        (SecurityLevel::Medium, DisclaimerCategory::Upgrade) => {
+            soroban_sdk::String::from_str(&env, "⚠️  UPGRADE WARNING: Contract upgrades may introduce security vulnerabilities. Always verify upgrade logic and test thoroughly before deployment. MEDIUM: Upgrade requires admin approval.")
+        }
+        (SecurityLevel::Low, DisclaimerCategory::Upgrade) => {
+            soroban_sdk::String::from_str(&env, "⚠️  UPGRADE WARNING: Contract upgrades may introduce security vulnerabilities. Always verify upgrade logic and test thoroughly before deployment. This contract supports upgrades.")
+        }
+        (SecurityLevel::Critical, DisclaimerCategory::Emergency) => {
+            soroban_sdk::String::from_str(&env, "EMERGENCY: Critical security issue detected. Contact development team immediately.")
+        }
+        (SecurityLevel::High, DisclaimerCategory::Emergency) => {
+            soroban_sdk::String::from_str(&env, "EMERGENCY: High priority security issue. Contact development team immediately.")
+        }
+        (SecurityLevel::Medium, DisclaimerCategory::Emergency) => {
+            soroban_sdk::String::from_str(&env, "EMERGENCY: Medium priority security issue. Contact development team immediately.")
+        }
+        (SecurityLevel::Low, DisclaimerCategory::Emergency) => {
+            soroban_sdk::String::from_str(&env, "EMERGENCY: Low priority security issue. Contact development team immediately.")
         }
     }
+}
 
-    /// Check if contract requires audit based on security level
-    pub fn requires_audit(_env: Env, level: SecurityLevel) -> bool {
-        matches!(level, SecurityLevel::High | SecurityLevel::Critical)
-    }
+/// Check if contract requires audit based on security level
+pub fn requires_audit(_env: Env, level: SecurityLevel) -> bool {
+    matches!(level, SecurityLevel::High | SecurityLevel::Critical)
+}
 
-    /// Get recommended testing requirements
-    pub fn get_testing_requirements(_env: Env, level: SecurityLevel) -> String {
-        match level {
-            SecurityLevel::Critical => {
-                String::from("Requirements: Formal verification, comprehensive audit, stress testing, security review")
-            }
-            SecurityLevel::High => {
-                String::from("Requirements: Professional audit, integration testing, security review")
-            }
-            SecurityLevel::Medium => {
-                String::from("Requirements: Security review, unit testing, integration testing")
-            }
-            SecurityLevel::Low => {
-                String::from("Requirements: Unit testing, basic security review")
-            }
+/// Get recommended testing requirements
+pub fn get_testing_requirements(env: Env, level: SecurityLevel) -> soroban_sdk::String {
+    match level {
+        SecurityLevel::Critical => {
+            soroban_sdk::String::from_str(&env, "Requirements: Formal verification, comprehensive audit, stress testing, security review")
+        }
+        SecurityLevel::High => {
+            soroban_sdk::String::from_str(&env, "Requirements: Professional audit, integration testing, security review")
+        }
+        SecurityLevel::Medium => {
+            soroban_sdk::String::from_str(&env, "Requirements: Security review, unit testing, integration testing")
+        }
+        SecurityLevel::Low => {
+            soroban_sdk::String::from_str(&env, "Requirements: Unit testing, basic security review")
         }
     }
+}
 
-    /// Validate security configuration
-    pub fn validate_security_config(_env: Env, level: SecurityLevel, has_admin: bool, has_upgrade: bool) -> bool {
-        match level {
-            SecurityLevel::Critical => has_admin && has_upgrade,
-            SecurityLevel::High => has_admin,
-            SecurityLevel::Medium | SecurityLevel::Low => true,
-        }
+/// Validate security configuration
+pub fn validate_security_config(
+    _env: Env,
+    level: SecurityLevel,
+    has_admin: bool,
+    has_upgrade: bool,
+) -> bool {
+    match level {
+        SecurityLevel::Critical => has_admin && has_upgrade,
+        SecurityLevel::High => has_admin,
+        SecurityLevel::Medium => true,
+        SecurityLevel::Low => true,
     }
 }
 
@@ -201,31 +213,46 @@ macro_rules! security_disclaimer {
 }
 
 /// Helper function to format security disclaimer for contract documentation
-pub fn format_contract_disclaimer(level: SecurityLevel, contract_name: &str) -> String {
-    let mut result = String::from("\n\n## 🔐 Security Disclaimer\n\n");
+#[cfg(not(target_arch = "wasm32"))]
+pub fn format_contract_disclaimer(
+    level: SecurityLevel,
+    contract_name: &str,
+) -> alloc::string::String {
+    let mut result = alloc::string::String::from("\n\n## 🔐 Security Disclaimer\n\n");
     result += "**Contract:** ";
     result += contract_name;
     result += "\n**Security Level:** ";
-    
+
     // Convert security level to string representation
     let level_str = match level {
         SecurityLevel::Low => "Low",
-        SecurityLevel::Medium => "Medium", 
+        SecurityLevel::Medium => "Medium",
         SecurityLevel::High => "High",
         SecurityLevel::Critical => "Critical",
     };
+
     result += level_str;
     result += "\n**Audit Required:** ";
-    
-    let audit_required = SecurityDisclaimer::requires_audit(Env::default(), level);
+
+    let audit_required = requires_audit(Env::default(), level);
     result += if audit_required { "true" } else { "false" };
-    
+
     result += "\n\n";
-    result += &SecurityDisclaimer::get_disclaimer(Env::default(), level, DisclaimerCategory::Audit);
-    result += "\n\n**Testing Requirements:** ";
-    result += &SecurityDisclaimer::get_testing_requirements(Env::default(), level);
+    result += "**Security Warning:** This contract has not been audited. Use at your own risk.\n";
+    result += "**Testing Requirements:** ";
+
+    let testing_req = match level {
+        SecurityLevel::Critical => {
+            "Formal verification, comprehensive audit, stress testing, security review"
+        }
+        SecurityLevel::High => "Professional audit, integration testing, security review",
+        SecurityLevel::Medium => "Security review, unit testing, integration testing",
+        SecurityLevel::Low => "Unit testing, basic security review",
+    };
+
+    result += testing_req;
     result += "\n\nUse this contract only after understanding the risks and implementing appropriate security measures.\n";
-    
+
     result
 }
 
@@ -243,33 +270,105 @@ mod tests {
     #[test]
     fn test_audit_requirements() {
         let env = Env::default();
-        assert!(SecurityDisclaimer::requires_audit(env.clone(), SecurityLevel::Critical));
-        assert!(SecurityDisclaimer::requires_audit(env.clone(), SecurityLevel::High));
-        assert!(!SecurityDisclaimer::requires_audit(env.clone(), SecurityLevel::Medium));
-        assert!(!SecurityDisclaimer::requires_audit(env.clone(), SecurityLevel::Low));
+        assert!(SecurityDisclaimer::requires_audit(
+            env.clone(),
+            SecurityLevel::Critical
+        ));
+        assert!(SecurityDisclaimer::requires_audit(
+            env.clone(),
+            SecurityLevel::High
+        ));
+        assert!(!SecurityDisclaimer::requires_audit(
+            env.clone(),
+            SecurityLevel::Medium
+        ));
+        assert!(!SecurityDisclaimer::requires_audit(
+            env.clone(),
+            SecurityLevel::Low
+        ));
     }
 
     #[test]
     fn test_security_config_validation() {
         let env = Env::default();
-        
+
         // Critical level requires both admin and upgrade
-        assert!(SecurityDisclaimer::validate_security_config(env.clone(), SecurityLevel::Critical, true, true));
-        assert!(!SecurityDisclaimer::validate_security_config(env.clone(), SecurityLevel::Critical, true, false));
-        assert!(!SecurityDisclaimer::validate_security_config(env.clone(), SecurityLevel::Critical, false, true));
-        assert!(!SecurityDisclaimer::validate_security_config(env.clone(), SecurityLevel::Critical, false, false));
-        
+        assert!(SecurityDisclaimer::validate_security_config(
+            env.clone(),
+            SecurityLevel::Critical,
+            true,
+            true
+        ));
+        assert!(!SecurityDisclaimer::validate_security_config(
+            env.clone(),
+            SecurityLevel::Critical,
+            true,
+            false
+        ));
+        assert!(!SecurityDisclaimer::validate_security_config(
+            env.clone(),
+            SecurityLevel::Critical,
+            false,
+            true
+        ));
+        assert!(!SecurityDisclaimer::validate_security_config(
+            env.clone(),
+            SecurityLevel::Critical,
+            false,
+            false
+        ));
+
         // High level requires admin
-        assert!(SecurityDisclaimer::validate_security_config(env.clone(), SecurityLevel::High, true, false));
-        assert!(SecurityDisclaimer::validate_security_config(env.clone(), SecurityLevel::High, true, true));
-        assert!(!SecurityDisclaimer::validate_security_config(env.clone(), SecurityLevel::High, false, true));
-        assert!(!SecurityDisclaimer::validate_security_config(env.clone(), SecurityLevel::High, false, false));
-        
+        assert!(SecurityDisclaimer::validate_security_config(
+            env.clone(),
+            SecurityLevel::High,
+            true,
+            false
+        ));
+        assert!(SecurityDisclaimer::validate_security_config(
+            env.clone(),
+            SecurityLevel::High,
+            true,
+            true
+        ));
+        assert!(!SecurityDisclaimer::validate_security_config(
+            env.clone(),
+            SecurityLevel::High,
+            false,
+            true
+        ));
+        assert!(!SecurityDisclaimer::validate_security_config(
+            env.clone(),
+            SecurityLevel::High,
+            false,
+            false
+        ));
+
         // Medium and Low levels have no requirements
-        assert!(SecurityDisclaimer::validate_security_config(env.clone(), SecurityLevel::Medium, false, false));
-        assert!(SecurityDisclaimer::validate_security_config(env.clone(), SecurityLevel::Medium, true, true));
-        assert!(SecurityDisclaimer::validate_security_config(env.clone(), SecurityLevel::Low, false, false));
-        assert!(SecurityDisclaimer::validate_security_config(env.clone(), SecurityLevel::Low, true, true));
+        assert!(SecurityDisclaimer::validate_security_config(
+            env.clone(),
+            SecurityLevel::Medium,
+            false,
+            false
+        ));
+        assert!(SecurityDisclaimer::validate_security_config(
+            env.clone(),
+            SecurityLevel::Medium,
+            true,
+            true
+        ));
+        assert!(SecurityDisclaimer::validate_security_config(
+            env.clone(),
+            SecurityLevel::Low,
+            false,
+            false
+        ));
+        assert!(SecurityDisclaimer::validate_security_config(
+            env.clone(),
+            SecurityLevel::Low,
+            true,
+            true
+        ));
     }
 
     #[test]

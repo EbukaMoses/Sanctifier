@@ -41,11 +41,23 @@
 //! - Consider implementing veto mechanisms for emergency situations
 #![no_std]
 
+#[cfg(feature = "security-disclaimers")]
+use security_disclaimers::{DisclaimerCategory, SecurityLevel};
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, token, vec, xdr::ToXdr,
     Address, BytesN, Env, IntoVal, Symbol, Val, Vec,
 };
-use security_disclaimers::{SecurityLevel, DisclaimerCategory, SecurityDisclaimer};
+
+#[cfg(not(feature = "security-disclaimers"))]
+#[contracttype]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[repr(u8)]
+pub enum DisclaimerCategory {
+    Audit = 0,
+    Usage = 1,
+    Upgrade = 2,
+    Emergency = 3,
+}
 
 #[cfg(test)]
 mod test;
@@ -135,14 +147,36 @@ pub struct GovernorContract;
 #[contractimpl]
 impl GovernorContract {
     /// Get security disclaimer for this contract
-    pub fn get_security_disclaimer(env: Env, category: DisclaimerCategory) -> soroban_sdk::String {
-        let disclaimer = SecurityDisclaimer::get_disclaimer(env.clone(), SecurityLevel::Critical, category);
-        soroban_sdk::String::from_str(&env, &disclaimer)
+    pub fn get_security_disclaimer(env: Env, _category: DisclaimerCategory) -> soroban_sdk::String {
+        #[cfg(feature = "security-disclaimers")]
+        {
+            security_disclaimers::get_disclaimer(env.clone(), SecurityLevel::Critical, _category)
+        }
+        #[cfg(not(feature = "security-disclaimers"))]
+        {
+            soroban_sdk::String::from_str(
+                &env,
+                "Security disclaimer functionality not available in this build.",
+            )
+        }
     }
 
     /// Validate security configuration
-    pub fn validate_security_config(env: Env, has_admin: bool, has_upgrade: bool) -> bool {
-        SecurityDisclaimer::validate_security_config(env, SecurityLevel::Critical, has_admin, has_upgrade)
+    pub fn validate_security_config(_env: Env, has_admin: bool, has_upgrade: bool) -> bool {
+        #[cfg(feature = "security-disclaimers")]
+        {
+            security_disclaimers::validate_security_config(
+                _env,
+                SecurityLevel::Critical,
+                has_admin,
+                has_upgrade,
+            )
+        }
+        #[cfg(not(feature = "security-disclaimers"))]
+        {
+            // Default validation for builds without security-disclaimers
+            has_admin && has_upgrade
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
