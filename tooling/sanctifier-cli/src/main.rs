@@ -28,6 +28,8 @@ pub enum Commands {
     Badge(commands::badge::BadgeArgs),
     /// Generate a Markdown or HTML security report
     Report(commands::report::ReportArgs),
+    /// Estimate gas / instruction costs for a contract source file or workspace
+    Gas(commands::gas::GasArgs),
     /// Detect potential storage key collisions in Soroban contracts
     Storage(commands::storage::StorageArgs),
     /// Initialize Sanctifier in a new project
@@ -74,6 +76,9 @@ fn run() -> anyhow::Result<()> {
     let log_output = match &cli.command {
         Commands::Analyze(args) if args.format == "json" => logging::LogOutput::Json,
         Commands::Diff(args) if args.format == "json" => logging::LogOutput::Json,
+        Commands::Gas(args) if args.format == commands::gas::OutputFormat::Json => {
+            logging::LogOutput::Json
+        }
         Commands::Storage(args) if args.format == commands::storage::OutputFormat::Json => {
             logging::LogOutput::Json
         }
@@ -92,6 +97,9 @@ fn run() -> anyhow::Result<()> {
         }
         Commands::Report(args) => {
             commands::report::exec(args)?;
+        }
+        Commands::Gas(args) => {
+            commands::gas::exec(args)?;
         }
         Commands::Storage(args) => {
             commands::storage::exec(args)?;

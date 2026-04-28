@@ -43,6 +43,8 @@ impl ConfigGenerator {
                 },
             ],
             approaching_threshold: 0.8,
+            max_findings: 0,
+            fail_fast: false,
         }
     }
 }

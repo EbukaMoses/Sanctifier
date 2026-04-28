@@ -94,15 +94,17 @@ pub fn validate_no_null_bytes(source: &str) -> Result<(), ValidationError> {
 /// # Errors
 /// - `INVALID_UTF8` — the byte sequence is not valid UTF-8.
 pub fn validate_utf8(bytes: &[u8]) -> Result<(), ValidationError> {
-    std::str::from_utf8(bytes).map(|_| ()).map_err(|e| ValidationError {
-        code: "INVALID_UTF8",
-        message: format!(
-            "Source bytes are not valid UTF-8 at byte offset {}: {}. \
+    std::str::from_utf8(bytes)
+        .map(|_| ())
+        .map_err(|e| ValidationError {
+            code: "INVALID_UTF8",
+            message: format!(
+                "Source bytes are not valid UTF-8 at byte offset {}: {}. \
              Ensure the file is saved as UTF-8.",
-            e.valid_up_to(),
-            e
-        ),
-    })
+                e.valid_up_to(),
+                e
+            ),
+        })
 }
 
 /// Validate that `path` does not contain path-traversal sequences.

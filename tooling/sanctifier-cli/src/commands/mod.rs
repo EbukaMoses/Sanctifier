@@ -3,6 +3,7 @@ pub mod badge;
 pub mod complexity;
 pub mod diff;
 pub mod fix;
+pub mod gas;
 
 pub mod init;
 pub mod reentrancy;
