@@ -1,5 +1,5 @@
 use crate::commands::analyze::{run_analysis, AnalyzeArgs};
-use notify_debouncer_mini::{new_debouncer, notify::*, DebounceEventResult};
+use notify_debouncer_mini::{new_debouncer, notify::*};
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
@@ -15,19 +15,19 @@ pub struct WatchArgs {
 
 pub fn exec(args: WatchArgs) -> anyhow::Result<()> {
     let path = args.analyze_args.path.clone();
-    
+
     // Ensure the path exists
     if !path.exists() {
         anyhow::bail!("Path {:?} does not exist", path);
     }
 
     println!("🚀 Starting Sanctifier in watch mode...");
-    
+
     // Initial analysis
     let _ = run_analysis(args.analyze_args.clone());
 
     let (tx, rx) = channel();
-    
+
     // Setup debouncer with 500ms delay to avoid multiple triggers for a single save
     let mut debouncer = new_debouncer(Duration::from_millis(500), tx)?;
 
@@ -59,10 +59,8 @@ pub fn exec(args: WatchArgs) -> anyhow::Result<()> {
                     println!("\n👀 Watching for changes in {:?}...", path);
                 }
             }
-            Err(errors) => {
-                for e in errors {
-                    eprintln!("Watch error: {:?}", e);
-                }
+            Err(error) => {
+                eprintln!("Watch error: {:?}", error);
             }
         }
     }
