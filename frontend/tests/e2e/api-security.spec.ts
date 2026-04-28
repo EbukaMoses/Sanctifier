@@ -72,25 +72,37 @@ test.describe("API Security - File Size Validation", () => {
     const maxRetries = 3;
 
     while (retries < maxRetries) {
-      response = await request.post("/api/analyze", {
-        multipart: {
-          contract: {
-            name: "large.rs",
-            mimeType: "text/plain",
-            buffer: Buffer.from(largeContent),
-          },
-        },
-      });
+      try {
+        response = await Promise.race([
+          request.post("/api/analyze", {
+            multipart: {
+              contract: {
+                name: "large.rs",
+                mimeType: "text/plain",
+                buffer: Buffer.from(largeContent),
+              },
+            },
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Request timeout")), 10000))
+        ]) as any;
 
-      // If we hit rate limit, wait and retry with exponential backoff
-      if (response.status() === 429) {
-        retries++;
-        const retryAfter = response.headers()["retry-after"] || "2";
-        const delay = parseInt(retryAfter) * 1000 * Math.pow(2, retries - 1); // Exponential backoff
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
+        // If we hit rate limit, wait and retry with exponential backoff
+        if (response.status() === 429) {
+          retries++;
+          const retryAfter = response.headers()["retry-after"] || "2";
+          const delay = parseInt(retryAfter) * 1000 * Math.pow(2, retries - 1); // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        break;
+      } catch (error: any) {
+        if (error.message === "Request timeout" && retries < maxRetries - 1) {
+          retries++;
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
+        }
+        throw error;
       }
-      break;
     }
 
     expect(response!.status()).toBe(413);
@@ -107,25 +119,37 @@ test.describe("API Security - Input Validation", () => {
     const maxRetries = 3;
 
     while (retries < maxRetries) {
-      response = await request.post("/api/analyze", {
-        multipart: {
-          contract: {
-            name: "test.txt",
-            mimeType: "text/plain",
-            buffer: Buffer.from("content"),
-          },
-        },
-      });
+      try {
+        response = await Promise.race([
+          request.post("/api/analyze", {
+            multipart: {
+              contract: {
+                name: "test.txt",
+                mimeType: "text/plain",
+                buffer: Buffer.from("content"),
+              },
+            },
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Request timeout")), 10000))
+        ]) as any;
 
-      // If we hit rate limit, wait and retry with exponential backoff
-      if (response.status() === 429) {
-        retries++;
-        const retryAfter = response.headers()["retry-after"] || "2";
-        const delay = parseInt(retryAfter) * 1000 * Math.pow(2, retries - 1); // Exponential backoff
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
+        // If we hit rate limit, wait and retry with exponential backoff
+        if (response.status() === 429) {
+          retries++;
+          const retryAfter = response.headers()["retry-after"] || "2";
+          const delay = parseInt(retryAfter) * 1000 * Math.pow(2, retries - 1); // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        break;
+      } catch (error: any) {
+        if (error.message === "Request timeout" && retries < maxRetries - 1) {
+          retries++;
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          continue;
+        }
+        throw error;
       }
-      break;
     }
 
     expect(response!.status()).toBe(400);
