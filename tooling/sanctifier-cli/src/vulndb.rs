@@ -473,9 +473,11 @@ fn second() {
         temp_file.flush().expect("Failed to flush");
 
         let err = VulnDatabase::load(temp_file.path()).expect_err("invalid regex should fail");
-        assert!(err
-            .to_string()
-            .contains("BAD-REGEX has invalid regex pattern"));
+        let err_chain = format!("{err:#}");
+        assert!(
+            err_chain.contains("BAD-REGEX has invalid regex pattern"),
+            "expected error chain to contain 'BAD-REGEX has invalid regex pattern', got: {err_chain}"
+        );
     }
 
     #[test]
@@ -504,6 +506,15 @@ fn second() {
         temp_file.flush().expect("Failed to flush");
 
         let err = VulnDatabase::load(temp_file.path()).expect_err("invalid severity should fail");
+        let err_chain = format!("{err:#}");
+        assert!(
+            err_chain.contains("vulnerabilities[0].severity"),
+            "expected error chain to contain 'vulnerabilities[0].severity', got: {err_chain}"
+        );
+        assert!(
+            err_chain.contains("urgent"),
+            "expected error chain to contain 'urgent', got: {err_chain}"
+        );
         assert!(err.to_string().contains("vulnerabilities[0].severity"));
         assert!(err.to_string().contains("urgent"));
     }

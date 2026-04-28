@@ -2,7 +2,6 @@
 
 use assert_cmd::Command;
 use predicates::prelude::*;
-use serde_json::json;
 use std::env;
 
 /// Test that CLI version is properly reported
@@ -115,7 +114,8 @@ fn test_analyze_exit_code_on_high_severity() {
         .unwrap()
         .join("tests/fixtures/vulnerable_contract.rs");
 
-    cmd.arg("analyze")
+    let _ = cmd
+        .arg("analyze")
         .arg(&fixture_path)
         .arg("--exit-code")
         .arg("--min-severity")

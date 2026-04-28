@@ -19,5 +19,6 @@ module.exports = {
       ],
     ],
     "body-max-line-length": [0, "always", Infinity],
+    "header-max-length": [0, "always", 150],
   },
 };

@@ -66,6 +66,7 @@ export function normalizeReport(input: unknown): AnalysisReport {
     return report;
   }
 
+  // Handle legacy format (direct AnalysisReport structure)
   const findings = isRecord(parsed.findings) ? parsed.findings : parsed;
   const authGaps: AnalysisReport["auth_gaps"] = [];
 

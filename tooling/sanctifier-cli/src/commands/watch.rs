@@ -1,5 +1,5 @@
 use crate::commands::analyze::{run_analysis, AnalyzeArgs};
-use notify_debouncer_mini::{new_debouncer, notify::*, DebounceEventResult};
+use notify_debouncer_mini::{new_debouncer, notify::*};
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
@@ -59,8 +59,8 @@ pub fn exec(args: WatchArgs) -> anyhow::Result<()> {
                     println!("\n👀 Watching for changes in {:?}...", path);
                 }
             }
-            Err(e) => {
-                eprintln!("Watch error: {:?}", e);
+            Err(error) => {
+                eprintln!("Watch error: {:?}", error);
             }
         }
     }

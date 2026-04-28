@@ -36,12 +36,14 @@ pub mod analysis_cache;
 pub mod complexity;
 /// Custom YAML-based rule definitions.
 pub mod custom_yaml_rules;
+/// Event analysis pass.
+pub mod event_analysis;
 /// Canonical finding codes (`S000` – `S012`) emitted by every analysis pass.
 pub mod finding_codes;
 /// Gas / instruction-cost estimation heuristics.
 pub mod gas_estimator;
-/// (Reserved) Gas report rendering.
-pub(crate) mod gas_report;
+/// Gas report rendering and loop-warning formatting.
+pub mod gas_report;
 /// Input validation guards (size, null bytes, UTF-8, path traversal).
 pub mod input_validation;
 /// Automatic patch application.
@@ -56,6 +58,8 @@ pub mod sep41;
 /// Only available when the `smt` feature is enabled (default).
 #[cfg(feature = "smt")]
 pub mod smt;
+/// Upgrade and admin-pattern analysis pass.
+pub mod upgrade_analysis;
 /// Stub SMT types used when the `smt` feature is disabled.
 #[cfg(not(feature = "smt"))]
 pub mod smt {
@@ -291,25 +295,6 @@ fn is_cfg_test_attrs(attrs: &[syn::Attribute]) -> bool {
     attrs
         .iter()
         .any(|a| a.path().is_ident("cfg") && quote::quote!(#a).to_string().contains("test"))
-}
-
-fn is_upgrade_or_admin_fn(name: &str) -> bool {
-    let lower = name.to_lowercase();
-    matches!(
-        lower.as_str(),
-        "set_admin"
-            | "upgrade"
-            | "set_authorized"
-            | "deploy"
-            | "update_admin"
-            | "transfer_admin"
-            | "change_admin"
-    ) || (lower.contains("upgrade") && (lower.contains("contract") || lower.contains("wasm")))
-}
-
-fn is_init_fn(name: &str) -> bool {
-    let lower = name.to_lowercase();
-    lower == "initialize" || lower == "init" || lower == "initialise"
 }
 
 // ── ArithmeticIssue (NEW) ─────────────────────────────────────────────────────
@@ -604,7 +589,7 @@ impl Analyzer {
 
     /// Analyse upgrade/admin patterns and return an [`UpgradeReport`].
     pub fn analyze_upgrade_patterns(&self, source: &str) -> UpgradeReport {
-        with_panic_guard(|| self.analyze_upgrade_patterns_impl(source))
+        with_panic_guard(|| upgrade_analysis::analyze_upgrade_patterns(source))
     }
 
     /// Verify the contract against the SEP-41 token interface.
@@ -622,15 +607,11 @@ impl Analyzer {
 
         for item in &file.items {
             match item {
-                Item::Struct(s) => {
-                    if has_contracttype(&s.attrs) {
-                        report.storage_types.push(s.ident.to_string());
-                    }
+                Item::Struct(s) if has_contracttype(&s.attrs) => {
+                    report.storage_types.push(s.ident.to_string());
                 }
-                Item::Enum(e) => {
-                    if has_contracttype(&e.attrs) {
-                        report.storage_types.push(e.ident.to_string());
-                    }
+                Item::Enum(e) if has_contracttype(&e.attrs) => {
+                    report.storage_types.push(e.ident.to_string());
                 }
                 Item::Impl(i) => {
                     for impl_item in &i.items {
@@ -901,14 +882,12 @@ impl Analyzer {
                 }
                 // In syn 2.0, bare macro calls (e.g. `panic!(...)`) are Stmt::Macro,
                 // not Stmt::Expr(Expr::Macro(...)).
-                syn::Stmt::Macro(m) => {
-                    if m.mac.path.is_ident("panic") {
-                        issues.push(PanicIssue {
-                            function_name: fn_name.to_string(),
-                            issue_type: "panic!".to_string(),
-                            location: fn_name.to_string(),
-                        });
-                    }
+                syn::Stmt::Macro(m) if m.mac.path.is_ident("panic") => {
+                    issues.push(PanicIssue {
+                        function_name: fn_name.to_string(),
+                        issue_type: "panic!".to_string(),
+                        location: fn_name.to_string(),
+                    });
                 }
                 _ => {}
             }
@@ -917,14 +896,12 @@ impl Analyzer {
 
     fn check_expr_panics(&self, expr: &syn::Expr, fn_name: &str, issues: &mut Vec<PanicIssue>) {
         match expr {
-            syn::Expr::Macro(m) => {
-                if m.mac.path.is_ident("panic") {
-                    issues.push(PanicIssue {
-                        function_name: fn_name.to_string(),
-                        issue_type: "panic!".to_string(),
-                        location: fn_name.to_string(),
-                    });
-                }
+            syn::Expr::Macro(m) if m.mac.path.is_ident("panic") => {
+                issues.push(PanicIssue {
+                    function_name: fn_name.to_string(),
+                    issue_type: "panic!".to_string(),
+                    location: fn_name.to_string(),
+                });
             }
             syn::Expr::MethodCall(m) => {
                 let method_name = m.method.to_string();
@@ -974,12 +951,11 @@ impl Analyzer {
                         self.check_expr(&init.expr, summary);
                     }
                 }
-                syn::Stmt::Macro(m) => {
+                syn::Stmt::Macro(m)
                     if m.mac.path.is_ident("require_auth")
-                        || m.mac.path.is_ident("require_auth_for_args")
-                    {
-                        summary.has_auth = true;
-                    }
+                        || m.mac.path.is_ident("require_auth_for_args") =>
+                {
+                    summary.has_auth = true;
                 }
                 _ => {}
             }
@@ -1074,34 +1050,30 @@ impl Analyzer {
 
         for item in &file.items {
             match item {
-                Item::Struct(s) => {
-                    if has_contracttype(&s.attrs) {
-                        let size = self.estimate_struct_size(s);
-                        if let Some(level) =
-                            classify_size(size, limit, approaching, strict, strict_threshold)
-                        {
-                            warnings.push(SizeWarning {
-                                struct_name: s.ident.to_string(),
-                                estimated_size: size,
-                                limit,
-                                level,
-                            });
-                        }
+                Item::Struct(s) if has_contracttype(&s.attrs) => {
+                    let size = self.estimate_struct_size(s);
+                    if let Some(level) =
+                        classify_size(size, limit, approaching, strict, strict_threshold)
+                    {
+                        warnings.push(SizeWarning {
+                            struct_name: s.ident.to_string(),
+                            estimated_size: size,
+                            limit,
+                            level,
+                        });
                     }
                 }
-                Item::Enum(e) => {
-                    if has_contracttype(&e.attrs) {
-                        let size = self.estimate_enum_size(e);
-                        if let Some(level) =
-                            classify_size(size, limit, approaching, strict, strict_threshold)
-                        {
-                            warnings.push(SizeWarning {
-                                struct_name: e.ident.to_string(),
-                                estimated_size: size,
-                                limit,
-                                level,
-                            });
-                        }
+                Item::Enum(e) if has_contracttype(&e.attrs) => {
+                    let size = self.estimate_enum_size(e);
+                    if let Some(level) =
+                        classify_size(size, limit, approaching, strict, strict_threshold)
+                    {
+                        warnings.push(SizeWarning {
+                            struct_name: e.ident.to_string(),
+                            estimated_size: size,
+                            limit,
+                            level,
+                        });
                     }
                 }
                 Item::Impl(_) | Item::Macro(_) => {}
@@ -1114,122 +1086,11 @@ impl Analyzer {
 
     // ── Event Consistency and Optimization ──────────────────────────────────────
 
-    fn extract_topics(line: &str) -> String {
-        if let Some(start_paren) = line.find('(') {
-            let after_publish = &line[start_paren + 1..];
-            if let Some(end_paren) = after_publish.rfind(')') {
-                let topics_content = &after_publish[..end_paren];
-                if topics_content.contains(',') || topics_content.starts_with('(') {
-                    return topics_content.to_string();
-                }
-            }
-        }
-        if let Some(vec_start) = line.find("vec![") {
-            let after_vec = &line[vec_start + 5..];
-            if let Some(end_bracket) = after_vec.find(']') {
-                return after_vec[..end_bracket].to_string();
-            }
-        }
-        String::new()
-    }
-
-    fn extract_event_name(line: &str) -> Option<String> {
-        if let Some(start) = line.find('(') {
-            let content = &line[start..];
-            if let Some(name_end) = content.find(',') {
-                let name_part = &content[1..name_end];
-                let clean_name = name_part.trim().trim_matches('"');
-                if !clean_name.is_empty() {
-                    return Some(clean_name.to_string());
-                }
-            } else if let Some(end_paren) = content.find(')') {
-                let name_part = &content[1..end_paren];
-                let clean_name = name_part.trim().trim_matches('"');
-                if !clean_name.is_empty() {
-                    return Some(clean_name.to_string());
-                }
-            }
-        }
-        None
-    }
-
     /// Scans for `env.events().publish(topics, data)` and checks:
     /// 1. Consistency of topic counts for the same event name.
     /// 2. Opportunities to use `symbol_short!` for gas savings.
     pub fn scan_events(&self, source: &str) -> Vec<EventIssue> {
-        with_panic_guard(|| self.scan_events_impl(source))
-    }
-
-    fn scan_events_impl(&self, source: &str) -> Vec<EventIssue> {
-        let mut issues = Vec::new();
-        let mut event_schemas: std::collections::HashMap<String, Vec<usize>> =
-            std::collections::HashMap::new();
-        let mut issue_locations: std::collections::HashSet<String> =
-            std::collections::HashSet::new();
-
-        for (line_num, line) in source.lines().enumerate() {
-            let line = line.trim();
-
-            if line.contains("env.events().publish(") || line.contains("env.events().emit(") {
-                let topics_str = Self::extract_topics(line);
-                let topic_count = if topics_str.is_empty() {
-                    0
-                } else {
-                    topics_str.matches(',').count() + 1
-                };
-
-                let event_name = Self::extract_event_name(line)
-                    .unwrap_or_else(|| format!("unknown_{}", line_num));
-
-                let location = format!("line {}", line_num + 1);
-                let _location_key = format!("{}:{}", event_name, topic_count);
-
-                if let Some(previous_counts) = event_schemas.get(&event_name) {
-                    for &prev_count in previous_counts {
-                        if prev_count != topic_count {
-                            let issue_key = format!("{}:{}:inconsistent", event_name, line_num + 1);
-                            if !issue_locations.contains(&issue_key) {
-                                issue_locations.insert(issue_key);
-                                issues.push(EventIssue {
-                                    function_name: "unknown".to_string(), // scan_events_impl is regex-based, function context is limited
-                                    event_name: event_name.clone(),
-                                    issue_type: EventIssueType::InconsistentSchema,
-                                    message: format!(
-                                        "Event '{}' has inconsistent topic count. Previous: {}, Current: {}",
-                                        event_name, prev_count, topic_count
-                                    ),
-                                    location: location.clone(),
-                                });
-                            }
-                        }
-                    }
-                }
-
-                event_schemas
-                    .entry(event_name.clone())
-                    .or_default()
-                    .push(topic_count);
-
-                if !line.contains("symbol_short!") && topic_count > 0 {
-                    let has_string_topic = line.contains("\"") || line.contains("String");
-                    if has_string_topic {
-                        let issue_key = format!("{}:{}:gas_optimization", event_name, line_num + 1);
-                        if !issue_locations.contains(&issue_key) {
-                            issue_locations.insert(issue_key);
-                            issues.push(EventIssue {
-                                function_name: "unknown".to_string(),
-                                event_name,
-                                issue_type: EventIssueType::OptimizableTopic,
-                                message: "Consider using symbol_short! for short topic names to save gas.".to_string(),
-                                location: format!("line {}", line_num + 1),
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        issues
+        with_panic_guard(|| event_analysis::scan_events(source))
     }
 
     // ── Unsafe-pattern visitor ────────────────────────────────────────────────
@@ -1516,7 +1377,7 @@ impl Analyzer {
 }
 
 /// An edge in the cross-contract call graph.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContractCallEdge {
     /// The calling contract.
     pub caller: String,

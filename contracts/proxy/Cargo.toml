@@ -16,6 +16,9 @@ soroban-sdk = { workspace = true, features = ["testutils"] }
 [features]
 testutils = ["soroban-sdk/testutils"]
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
+
 [profile.release]
 opt-level = "z"
 overflow-checks = true

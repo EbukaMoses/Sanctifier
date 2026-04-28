@@ -54,5 +54,11 @@ export function createWorkspaceFromSingleReport(rawReport: unknown): WorkspaceSu
 }
 
 export function parseJsonInput(input: string): unknown {
-  return JSON.parse(input || SAMPLE_JSON);
+  // If input is empty or whitespace-only, return sample JSON
+  if (!input || input.trim() === "") {
+    return JSON.parse(SAMPLE_JSON);
+  }
+  
+  // Try to parse the input, let errors bubble up for invalid JSON
+  return JSON.parse(input);
 }

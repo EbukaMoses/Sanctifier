@@ -11,10 +11,7 @@
         "type": "string"
       },
       "description": "List of directory or file paths to ignore during scanning (e.g., ['target', '.git'])",
-      "default": [
-        "target",
-        ".git"
-      ]
+      "default": ["target", ".git"]
     },
     "enabled_rules": {
       "type": "array",
@@ -31,12 +28,7 @@
         ]
       },
       "description": "List of built-in security analysis rules to enable",
-      "default": [
-        "auth_gaps",
-        "panics",
-        "arithmetic",
-        "ledger_size"
-      ]
+      "default": ["auth_gaps", "panics", "arithmetic", "ledger_size"]
     },
     "ledger_limit": {
       "type": "integer",
@@ -64,20 +56,12 @@
           },
           "severity": {
             "type": "string",
-            "enum": [
-              "info",
-              "warning",
-              "error"
-            ],
+            "enum": ["info", "warning", "error"],
             "description": "The severity level reported when a match is found",
             "default": "warning"
           }
         },
-        "required": [
-          "name",
-          "pattern",
-          "severity"
-        ]
+        "required": ["name", "pattern", "severity"]
       }
     }
   },

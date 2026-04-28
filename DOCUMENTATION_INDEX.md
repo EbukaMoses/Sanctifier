@@ -85,6 +85,13 @@
 
 ## 🛠️ Component Documentation
 
+### Contract ABI / Interface Reference
+**[docs/contract-interfaces.md](docs/contract-interfaces.md)** - Public ABI for all contracts in `contracts/*`
+- Function signatures and descriptions for every contract
+- Error code tables
+- Machine-readable JSON at `docs/generated/contract-interfaces.json`
+- Regenerate with `make contract-docs`; CI enforces freshness via `make contract-docs-check`
+
 ### Runtime Guard Wrapper Contract
 
 **[contracts/runtime-guard-wrapper/README.md](contracts/runtime-guard-wrapper/README.md)**
