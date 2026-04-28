@@ -1,6 +1,6 @@
 [package]
 name = "uups-proxy"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "UUPS upgradeability pattern template for Soroban contracts"
 
@@ -9,6 +9,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 soroban-sdk = { workspace = true }
+security-disclaimers = { path = "../security-disclaimers" }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }

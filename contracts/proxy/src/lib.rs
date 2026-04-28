@@ -7,6 +7,18 @@
 //! This keeps the proxy minimal and ensures that only the implementation
 //! can authorise its own replacement.
 //!
+//! ## 🔐 Security Disclaimer
+//!
+//! **Contract:** UUPS Proxy  
+//! **Security Level:** High  
+//! **Audit Required:** true  
+//!
+//! ⚠️  SECURITY WARNING: This contract has not been audited. Use at your own risk. Deploy only after thorough testing and security review. HIGH: Professional audit strongly recommended.
+//!
+//! **Testing Requirements:** Requirements: Professional audit, integration testing, security review
+//!
+//! Use this contract only after understanding the risks and implementing appropriate security measures.
+//!
 //! ## Design
 //! ```text
 //! ┌──────────────┐   delegate calls   ┌──────────────────┐
@@ -36,10 +48,20 @@
 //! | `PEND_ADMIN`   | `Address` | Instance | Pending admin (two-step transfer)   |
 //! | `VERSION`      | `u32`     | Instance | Upgrade counter                     |
 //! | `IMPL_HASH`    | `Bytes`   | Instance | SHA-256 hash of last deployed WASM  |
+//!
+//! ## Security Considerations
+//!
+//! - Upgradeability introduces significant security risks - only use when necessary
+//! - Admin address must be secure and preferably a multi-sig wallet
+//! - Always verify upgrade logic and test thoroughly before deployment
+//! - Monitor upgrade events for suspicious activity
+//! - Consider implementing time delays for critical upgrades
+//! - Version management must prevent malicious rollbacks
 
 use soroban_sdk::{
     contract, contractimpl, contracttype, symbol_short, Address, BytesN, Env, Symbol,
 };
+use security_disclaimers::{SecurityLevel, DisclaimerCategory, SecurityDisclaimer};
 
 // ── Storage keys ────────────────────────────────────────────────────────────────
 
@@ -74,6 +96,17 @@ pub struct UupsProxy;
 
 #[contractimpl]
 impl UupsProxy {
+    /// Get security disclaimer for this contract
+    pub fn get_security_disclaimer(env: Env, category: DisclaimerCategory) -> soroban_sdk::String {
+        let disclaimer = SecurityDisclaimer::get_disclaimer(env.clone(), SecurityLevel::High, category);
+        soroban_sdk::String::from_str(&env, &disclaimer)
+    }
+
+    /// Validate security configuration
+    pub fn validate_security_config(env: Env, has_admin: bool, has_upgrade: bool) -> bool {
+        SecurityDisclaimer::validate_security_config(env, SecurityLevel::High, has_admin, has_upgrade)
+    }
+
     // ── Lifecycle ──────────────────────────────────────────────────────────────
 
     /// Initialise the proxy. Can only be called once.

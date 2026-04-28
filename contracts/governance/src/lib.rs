@@ -4,6 +4,18 @@
 //! quorum, threshold, voting delay, and voting period.  Proposals that pass
 //! are queued in a [`TimelockController`](crate) before execution.
 //!
+//! ## 🔐 Security Disclaimer
+//!
+//! **Contract:** Governance Contract  
+//! **Security Level:** Critical  
+//! **Audit Required:** true  
+//!
+//! ⚠️  SECURITY WARNING: This contract has not been audited. Use at your own risk. Deploy only after thorough testing and security review. CRITICAL: Formal verification required.
+//!
+//! **Testing Requirements:** Requirements: Formal verification, comprehensive audit, stress testing, security review
+//!
+//! Use this contract only after understanding the risks and implementing appropriate security measures.
+//!
 //! ## Public Interface (ABI)
 //!
 //! | Function | Description |
@@ -18,12 +30,22 @@
 //! ## Error Codes
 //!
 //! See [`Error`] for the full list of contract error variants.
+//!
+//! ## Security Considerations
+//!
+//! - This contract controls critical governance decisions that can affect the entire protocol
+//! - Voting parameters (quorum, threshold, delay) must be carefully configured
+//! - Token-weighted voting can be subject to whale attacks - consider implementing safeguards
+//! - Timelock duration should be sufficient for community review and emergency response
+//! - Proposal execution should be monitored for suspicious patterns
+//! - Consider implementing veto mechanisms for emergency situations
 #![no_std]
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, token, vec, xdr::ToXdr,
     Address, BytesN, Env, IntoVal, Symbol, Val, Vec,
 };
+use security_disclaimers::{SecurityLevel, DisclaimerCategory, SecurityDisclaimer};
 
 #[cfg(test)]
 mod test;
@@ -112,6 +134,17 @@ pub struct GovernorContract;
 
 #[contractimpl]
 impl GovernorContract {
+    /// Get security disclaimer for this contract
+    pub fn get_security_disclaimer(env: Env, category: DisclaimerCategory) -> soroban_sdk::String {
+        let disclaimer = SecurityDisclaimer::get_disclaimer(env.clone(), SecurityLevel::Critical, category);
+        soroban_sdk::String::from_str(&env, &disclaimer)
+    }
+
+    /// Validate security configuration
+    pub fn validate_security_config(env: Env, has_admin: bool, has_upgrade: bool) -> bool {
+        SecurityDisclaimer::validate_security_config(env, SecurityLevel::Critical, has_admin, has_upgrade)
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn init(
         env: Env,
