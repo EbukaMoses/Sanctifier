@@ -512,6 +512,113 @@ fn test_callgraph_generates_dot_for_invoke_contract_calls() {
 }
 
 #[test]
+fn test_gas_text_output_lists_functions_and_total() {
+    let temp_dir = tempdir().unwrap();
+    let contract_path = temp_dir.path().join("gas_contract.rs");
+
+    fs::write(
+        &contract_path,
+        r#"
+            use soroban_sdk::{contractimpl, Env};
+
+            #[contractimpl]
+            impl DemoContract {
+                pub fn add(env: Env, a: u32, b: u32) -> u32 {
+                    a + b
+                }
+            }
+        "#,
+    )
+    .unwrap();
+
+    Command::cargo_bin("sanctifier")
+        .unwrap()
+        .arg("gas")
+        .arg(&contract_path)
+        .assert()
+        .success()
+        .stdout(predicates::str::contains(
+            "Function                 | Estimated instructions",
+        ))
+        .stdout(predicates::str::contains("add"))
+        .stdout(predicates::str::contains("Total                    |"));
+}
+
+#[test]
+fn test_gas_json_output_has_functions_and_total() {
+    let temp_dir = tempdir().unwrap();
+    let contract_path = temp_dir.path().join("gas_contract.rs");
+
+    fs::write(
+        &contract_path,
+        r#"
+            use soroban_sdk::{contractimpl, Env};
+
+            #[contractimpl]
+            impl DemoContract {
+                pub fn add(env: Env, a: u32, b: u32) -> u32 {
+                    a + b
+                }
+            }
+        "#,
+    )
+    .unwrap();
+
+    let output = Command::cargo_bin("sanctifier")
+        .unwrap()
+        .arg("gas")
+        .arg(&contract_path)
+        .arg("--format")
+        .arg("json")
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let json: Value = serde_json::from_slice(&output).unwrap();
+    let object = json.as_object().unwrap();
+    assert!(object.contains_key("functions"));
+    assert!(object.contains_key("total"));
+
+    let functions = object["functions"].as_array().unwrap();
+    assert_eq!(functions.len(), 1);
+    assert_eq!(functions[0]["function_name"], "add");
+}
+
+#[test]
+fn test_gas_text_output_warns_on_unbounded_loop() {
+    let temp_dir = tempdir().unwrap();
+    let contract_path = temp_dir.path().join("loop_contract.rs");
+
+    fs::write(
+        &contract_path,
+        r#"
+            use soroban_sdk::{contractimpl, Env};
+
+            #[contractimpl]
+            impl LoopContract {
+                pub fn iterate(env: Env, mut count: u32) {
+                    while count > 0 {
+                        count -= 1;
+                    }
+                }
+            }
+        "#,
+    )
+    .unwrap();
+
+    Command::cargo_bin("sanctifier")
+        .unwrap()
+        .arg("gas")
+        .arg(&contract_path)
+        .assert()
+        .success()
+        .stdout(predicates::str::contains("[WARN]"))
+        .stdout(predicates::str::contains("while-loop may be unbounded"));
+}
+
+#[test]
 fn test_analyze_json_includes_call_graph_edges() {
     let temp_dir = tempdir().unwrap();
     let contract_path = temp_dir.path().join("router.rs");
