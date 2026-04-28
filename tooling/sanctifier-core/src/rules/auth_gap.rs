@@ -148,12 +148,11 @@ fn check_fn_body(block: &syn::Block, summary: &mut FunctionSecuritySummary) {
                     check_expr(&init.expr, summary);
                 }
             }
-            syn::Stmt::Macro(m) => {
+            syn::Stmt::Macro(m)
                 if m.mac.path.is_ident("require_auth")
-                    || m.mac.path.is_ident("require_auth_for_args")
-                {
-                    summary.has_auth = true;
-                }
+                    || m.mac.path.is_ident("require_auth_for_args") =>
+            {
+                summary.has_auth = true;
             }
             _ => {}
         }

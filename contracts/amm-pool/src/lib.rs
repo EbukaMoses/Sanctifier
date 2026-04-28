@@ -1,4 +1,19 @@
-// AMM Pool contract.
+//! # AMM Pool Contract
+//!
+//! Constant-product AMM (x·y = k) for two tokens on Soroban.
+//!
+//! ## Public Interface (ABI)
+//!
+//! | Function | Description |
+//! |---|---|
+//! | [`AmmPool::add_liquidity`] | Deposit token pair, receive LP tokens |
+//! | [`AmmPool::remove_liquidity`] | Burn LP tokens, receive proportional reserves |
+//! | [`AmmPool::swap`] | Swap one token for the other |
+//! | [`AmmPool::get_price`] | Query the current spot price (scaled by 1 000 000) |
+//!
+//! ## Error Codes
+//!
+//! See [`AmmError`] for the full list of contract error variants.
 #![no_std]
 #![allow(unexpected_cfgs)]
 
@@ -25,25 +40,44 @@ enum DataKey {
     Version,
 }
 
+/// Errors returned by the AMM pool contract.
 #[contracterror]
 #[derive(Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub enum AmmError {
+    /// One or both deposit amounts are zero.
     ZeroAmount = 1,
+    /// `token_a` and `token_b` must be different addresses.
     IdenticalTokens = 2,
+    /// The supplied token pair does not match the initialised pair.
     InvalidPair = 3,
+    /// Pool has not been seeded with initial liquidity yet.
     PoolNotInitialized = 4,
+    /// Reserves are too low to satisfy the requested output.
     InsufficientLiquidity = 5,
+    /// Computed output is below the caller-supplied `min_out` guard.
     SlippageExceeded = 6,
+    /// Initial mint would produce fewer LP tokens than `MINIMUM_LIQUIDITY`.
     MintBelowMinimum = 7,
+    /// Cannot burn the permanently-locked minimum liquidity.
     LockedLiquidity = 8,
+    /// A checked arithmetic operation overflowed.
     ArithmeticOverflow = 9,
 }
 
+/// Constant-product AMM pool.
 #[contract]
 pub struct AmmPool;
 
 #[contractimpl]
 impl AmmPool {
+    /// Deposit `amount_a` of `token_a` and `amount_b` of `token_b` into the pool.
+    ///
+    /// On the first call the pair is initialised and `MINIMUM_LIQUIDITY` LP tokens
+    /// are permanently locked.  Subsequent calls mint LP tokens proportional to the
+    /// smaller of the two deposit ratios.
+    ///
+    /// Returns the number of LP tokens minted to the caller, or `0` on any
+    /// validation failure (zero amounts, wrong pair, slippage, overflow).
     pub fn add_liquidity(
         env: Env,
         token_a: Address,
@@ -118,6 +152,12 @@ impl AmmPool {
         minted
     }
 
+    /// Burn `lp_amount` LP tokens and withdraw proportional reserves.
+    ///
+    /// `min_a` / `min_b` are slippage guards; the call returns `(0, 0)` if
+    /// either computed amount falls below the respective minimum.
+    ///
+    /// The permanently-locked `MINIMUM_LIQUIDITY` can never be burned.
     pub fn remove_liquidity(env: Env, lp_amount: u128, min_a: u128, min_b: u128) -> (u128, u128) {
         env.current_contract_address().require_auth();
 
@@ -167,6 +207,10 @@ impl AmmPool {
         (amount_a, amount_b)
     }
 
+    /// Swap `amount_in` of `token_in` for the other token in the pair.
+    ///
+    /// `min_out` is a slippage guard; returns `0` if the computed output is
+    /// below it.  Uses the constant-product formula without a fee.
     pub fn swap(env: Env, token_in: Address, amount_in: u128, min_out: u128) -> u128 {
         env.current_contract_address().require_auth();
 
@@ -246,6 +290,9 @@ impl AmmPool {
         true
     }
 
+    /// Return the spot price of `token_in` denominated in `token_out`, scaled
+    /// by `PRICE_SCALE` (1 000 000).  Returns `0` for an unknown pair or an
+    /// uninitialised pool.
     pub fn get_price(env: Env, token_in: Address, token_out: Address) -> u128 {
         let Some(reserve_a) = read_reserve_a(&env) else {
             return 0;

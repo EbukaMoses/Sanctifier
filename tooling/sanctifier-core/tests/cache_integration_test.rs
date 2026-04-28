@@ -59,8 +59,16 @@ fn cache_hit_arithmetic_findings_match_fresh_analysis() {
         a.scan_arithmetic_overflow(OVERFLOW_CONTRACT)
     });
 
-    assert_eq!(fresh.len(), cached.len(), "cache hit count must match fresh count");
-    assert_eq!(cached.len(), cached2.len(), "repeated cache hits must be stable");
+    assert_eq!(
+        fresh.len(),
+        cached.len(),
+        "cache hit count must match fresh count"
+    );
+    assert_eq!(
+        cached.len(),
+        cached2.len(),
+        "repeated cache hits must be stable"
+    );
 }
 
 #[test]
@@ -88,7 +96,10 @@ fn clean_contract_produces_zero_findings_through_cache() {
         let result = cache.get_or_analyze("clean.rs", CLEAN_CONTRACT, || {
             a.scan_arithmetic_overflow(CLEAN_CONTRACT)
         });
-        assert!(result.is_empty(), "clean contract must produce no arithmetic findings");
+        assert!(
+            result.is_empty(),
+            "clean contract must produce no arithmetic findings"
+        );
     }
 }
 
@@ -108,7 +119,10 @@ fn source_change_invalidates_cache_and_returns_new_findings() {
     let after = cache.get_or_analyze("contract.rs", OVERFLOW_CONTRACT, || {
         a.scan_arithmetic_overflow(OVERFLOW_CONTRACT)
     });
-    assert!(!after.is_empty(), "overflow findings must appear after source change");
+    assert!(
+        !after.is_empty(),
+        "overflow findings must appear after source change"
+    );
 }
 
 #[test]
@@ -159,7 +173,8 @@ fn cache_handles_multiple_files_independently() {
 fn cache_stays_within_capacity_across_workspace_scan() {
     let a = analyzer();
     let capacity = 5usize;
-    let mut cache: AnalysisCache<Vec<sanctifier_core::ArithmeticIssue>> = AnalysisCache::new(capacity);
+    let mut cache: AnalysisCache<Vec<sanctifier_core::ArithmeticIssue>> =
+        AnalysisCache::new(capacity);
 
     // Simulate scanning 20 unique files.
     for i in 0..20usize {

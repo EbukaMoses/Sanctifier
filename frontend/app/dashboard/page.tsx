@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useTransition } from "react";
+import { useState, useCallback, useMemo, useTransition } from "react";
 import dynamic from "next/dynamic";
 import type { Severity } from "../types";
 import { transformReport, extractCallGraph, normalizeReport } from "../lib/transform";
@@ -73,7 +73,7 @@ export default function DashboardPage() {
     try {
       applyReport(parseJsonInput(text));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Invalid JSON");
+      setError("Invalid JSON");
       setWorkspace(null);
     }
   }, [applyReport, setWorkspace]);
@@ -157,7 +157,7 @@ export default function DashboardPage() {
     setCodeFilterError(validateFindingCodeQuery(normalized));
   }, []);
 
-  const hasData = findings.length > 0 || callGraphNodes.length > 0 || callGraphEdges.length > 0;
+  const hasData = currentReport !== null;
   const isProcessing = isPending || isUploadingContract;
   const hasLoadedReport = jsonInput.trim().length > 0;
 

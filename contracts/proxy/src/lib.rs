@@ -87,14 +87,10 @@ impl UupsProxy {
         env.storage().instance().set(&INITIALISED, &true);
         env.storage().instance().set(&ADMIN, &admin);
         env.storage().instance().set(&VERSION, &1u32);
-        env.storage()
-            .instance()
-            .set(&IMPL_HASH, &impl_hash);
+        env.storage().instance().set(&IMPL_HASH, &impl_hash);
 
-        env.events().publish(
-            (symbol_short!("init"),),
-            (admin, 1u32),
-        );
+        env.events()
+            .publish((symbol_short!("init"),), (admin, 1u32));
     }
 
     // ── Upgrade ────────────────────────────────────────────────────────────────
@@ -106,25 +102,18 @@ impl UupsProxy {
     pub fn upgrade(env: Env, new_wasm: BytesN<32>) {
         Self::require_admin(&env);
 
-        let current_version: u32 = env
-            .storage()
-            .instance()
-            .get(&VERSION)
-            .unwrap_or(1);
-        let next_version = current_version
-            .checked_add(1)
-            .expect("version overflow");
+        let current_version: u32 = env.storage().instance().get(&VERSION).unwrap_or(1);
+        let next_version = current_version.checked_add(1).expect("version overflow");
 
         // Replace the on-chain WASM
-        env.deployer().update_current_contract_wasm(new_wasm.clone());
+        env.deployer()
+            .update_current_contract_wasm(new_wasm.clone());
 
         env.storage().instance().set(&VERSION, &next_version);
         env.storage().instance().set(&IMPL_HASH, &new_wasm);
 
-        env.events().publish(
-            (symbol_short!("upgraded"),),
-            (next_version, new_wasm),
-        );
+        env.events()
+            .publish((symbol_short!("upgraded"),), (next_version, new_wasm));
     }
 
     // ── Two-step admin transfer ────────────────────────────────────────────────
@@ -133,10 +122,7 @@ impl UupsProxy {
     pub fn transfer_admin(env: Env, new_admin: Address) {
         Self::require_admin(&env);
         env.storage().instance().set(&PEND_ADMIN, &new_admin);
-        env.events().publish(
-            (symbol_short!("adm_nom"),),
-            new_admin,
-        );
+        env.events().publish((symbol_short!("adm_nom"),), new_admin);
     }
 
     /// Step 2: nominated admin accepts the transfer by calling this function.
@@ -151,10 +137,7 @@ impl UupsProxy {
         env.storage().instance().set(&ADMIN, &pending);
         env.storage().instance().remove(&PEND_ADMIN);
 
-        env.events().publish(
-            (symbol_short!("adm_xfer"),),
-            pending,
-        );
+        env.events().publish((symbol_short!("adm_xfer"),), pending);
     }
 
     // ── View functions ─────────────────────────────────────────────────────────
@@ -174,10 +157,7 @@ impl UupsProxy {
 
     /// Returns the current upgrade version counter.
     pub fn version(env: Env) -> u32 {
-        env.storage()
-            .instance()
-            .get(&VERSION)
-            .unwrap_or(0)
+        env.storage().instance().get(&VERSION).unwrap_or(0)
     }
 
     /// Returns the SHA-256 hash of the current implementation WASM.

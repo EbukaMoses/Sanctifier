@@ -1,42 +1,17 @@
 {
   "name": "@sanctifier/wasm",
+  "type": "module",
+  "description": "WASM bindings for the Sanctifier analysis engine",
   "version": "0.2.0",
-  "description": "WebAssembly bindings for the Sanctifier Soroban smart-contract static-analysis engine",
-  "main": "sanctifier_wasm.js",
-  "types": "sanctifier_wasm.d.ts",
-  "exports": {
-    ".": {
-      "import": "./sanctifier_wasm.js",
-      "types": "./sanctifier_wasm.d.ts"
-    }
-  },
+  "license": "MIT",
   "files": [
     "sanctifier_wasm_bg.wasm",
-    "sanctifier_wasm_bg.wasm.d.ts",
     "sanctifier_wasm.js",
     "sanctifier_wasm.d.ts"
   ],
-  "keywords": [
-    "soroban",
-    "stellar",
-    "smart-contract",
-    "static-analysis",
-    "wasm",
-    "security"
-  ],
-  "author": "HyperSafeD",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/HyperSafeD/Sanctifier"
-  },
-  "homepage": "https://github.com/HyperSafeD/Sanctifier/tree/main/tooling/sanctifier-wasm",
-  "bugs": {
-    "url": "https://github.com/HyperSafeD/Sanctifier/issues"
-  },
-  "sideEffects": false,
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  }
+  "main": "sanctifier_wasm.js",
+  "types": "sanctifier_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
 }

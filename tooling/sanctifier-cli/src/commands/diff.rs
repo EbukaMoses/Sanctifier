@@ -864,15 +864,20 @@ fn build_current_report(
 // ---------------------------------------------------------------------------
 
 pub fn exec(args: DiffArgs) -> anyhow::Result<()> {
-    let mut path = args.path.clone();
+    let path_raw = args.path.clone();
 
     #[cfg(not(windows))]
-    {
-        let s = path.to_string_lossy();
+    let path = {
+        let s = path_raw.to_string_lossy();
         if s.contains('\\') {
-            path = PathBuf::from(s.replace('\\', "/"));
+            PathBuf::from(s.replace('\\', "/"))
+        } else {
+            path_raw
         }
-    }
+    };
+
+    #[cfg(windows)]
+    let path = path_raw;
 
     let is_json = args.format == "json";
     let start = Instant::now();

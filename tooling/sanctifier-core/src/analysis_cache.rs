@@ -254,8 +254,8 @@ mod tests {
     #[test]
     fn clear_empties_all_entries() {
         let mut cache: AnalysisCache<Vec<String>> = AnalysisCache::new(8);
-        cache.get_or_analyze("a.rs", "fn a() {}", || vec![]);
-        cache.get_or_analyze("b.rs", "fn b() {}", || vec![]);
+        cache.get_or_analyze("a.rs", "fn a() {}", Vec::new);
+        cache.get_or_analyze("b.rs", "fn b() {}", Vec::new);
         assert_eq!(cache.len(), 2);
         cache.clear();
         assert!(cache.is_empty());

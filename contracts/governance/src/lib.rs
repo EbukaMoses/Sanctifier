@@ -1,3 +1,23 @@
+//! # Governance Contract
+//!
+//! On-chain governor for Soroban: token-weighted voting with a configurable
+//! quorum, threshold, voting delay, and voting period.  Proposals that pass
+//! are queued in a [`TimelockController`](crate) before execution.
+//!
+//! ## Public Interface (ABI)
+//!
+//! | Function | Description |
+//! |---|---|
+//! | [`GovernorContract::init`] | One-time initialisation |
+//! | [`GovernorContract::propose`] | Submit a new governance proposal |
+//! | [`GovernorContract::cast_vote`] | Vote for / against / abstain on a proposal |
+//! | [`GovernorContract::queue`] | Queue a succeeded proposal in the timelock |
+//! | [`GovernorContract::execute`] | Execute a queued proposal |
+//! | [`GovernorContract::state`] | Query the current [`ProposalState`] |
+//!
+//! ## Error Codes
+//!
+//! See [`Error`] for the full list of contract error variants.
 #![no_std]
 
 use soroban_sdk::{
@@ -8,18 +28,28 @@ use soroban_sdk::{
 #[cfg(test)]
 mod test;
 
+/// Errors returned by the governance contract.
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum Error {
+    /// Contract has not been initialised yet.
     NotInitialized = 1,
+    /// `init` has already been called.
     AlreadyInitialized = 2,
+    /// Caller lacks the required role or token balance.
     Unauthorized = 3,
+    /// No proposal exists with the given id.
     ProposalNotFound = 4,
+    /// The proposal is not in the expected state for this operation.
     InvalidState = 5,
+    /// `support` value must be 0 (against), 1 (for), or 2 (abstain).
     InvalidVote = 6,
+    /// This address has already cast a vote on this proposal.
     AlreadyVoted = 7,
+    /// Participation did not reach the configured quorum.
     QuorumNotMet = 8,
+    /// Proposer's token balance is below `proposal_threshold`.
     ProposalThresholdNotMet = 9,
 }
 

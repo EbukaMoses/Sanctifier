@@ -143,7 +143,7 @@ jobs:
           echo 'module.exports = {};' > tooling/sanctifier-wasm/pkg/index.js
 
       - name: Install frontend dependencies
-        run: cd frontend && npm ci
+        run: cd frontend && npm install
 
       - name: Run unit tests
         run: cd frontend && npm test
@@ -223,7 +223,7 @@ jobs:
           echo 'module.exports = {};' > tooling/sanctifier-wasm/pkg/index.js
 
       - name: Install frontend dependencies
-        run: cd frontend && npm ci
+        run: cd frontend && npm install
 
       - name: Install Playwright browsers
         run: cd frontend && npx playwright install --with-deps chromium
@@ -263,13 +263,62 @@ jobs:
           echo 'module.exports = {};' > tooling/sanctifier-wasm/pkg/index.js
 
       - name: Install frontend dependencies
-        run: cd frontend && npm ci
+        run: cd frontend && npm install
 
       - name: Install Playwright browsers
         run: cd frontend && npx playwright install --with-deps chromium
 
       - name: Run schema rendering e2e suite
         run: cd frontend && npm run test:e2e:schema
+
+  contract-docs:
+    name: Contract ABI / Interface Docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-contract-docs-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-contract-docs-
+
+      - name: Generate contract docs and interface summary
+        run: make contract-docs
+
+      - name: Verify interface summary is up-to-date
+        run: |
+          # Run extraction-only check (rustdoc already generated above)
+          SKIP_RUSTDOC=1 bash scripts/gen-contract-docs.sh --check
+
+      - name: Run ABI surface stability tests (amm-pool)
+        run: cargo test -p amm-pool --test integration_tests abi_ -- --nocapture
+
+      - name: Upload rustdoc artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-rustdoc
+          path: target/doc/
+          retention-days: 14
+
+      - name: Upload interface JSON artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-interfaces-json
+          path: docs/generated/contract-interfaces.json
+          retention-days: 14
 
   commitlint:
     name: Lint Commit Messages

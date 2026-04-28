@@ -30,11 +30,11 @@ use wasm_bindgen::prelude::*;
 
 // ── Module declarations ────────────────────────────────────────────────────────
 
-pub mod constants;
-pub mod validation;
-pub mod types;
-mod converters;
 mod analysis;
+pub mod constants;
+mod converters;
+pub mod types;
+pub mod validation;
 
 // Re-export the public API types so consumers can import them directly.
 pub use types::{
@@ -187,8 +187,8 @@ pub fn cache_metadata() -> JsValue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::validation::{check_memory_budget, validate_source};
     use crate::constants::{MAX_SOURCE_SIZE, MEMORY_BUDGET_BYTES, MEMORY_OVERHEAD_FACTOR};
+    use crate::validation::{check_memory_budget, validate_source};
 
     // ── validate_source ───────────────────────────────────────────────────────
 
@@ -233,7 +233,10 @@ mod tests {
         let result = check_memory_budget(just_over);
         assert!(result.is_err());
         let msg = result.unwrap_err();
-        assert!(msg.contains("memory budget"), "expected budget message, got: {msg}");
+        assert!(
+            msg.contains("memory budget"),
+            "expected budget message, got: {msg}"
+        );
     }
 
     #[test]

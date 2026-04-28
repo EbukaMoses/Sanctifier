@@ -1,3 +1,24 @@
+//! # Multisig Wallet Contract
+//!
+//! M-of-N multisignature wallet on Soroban.  Signers propose, approve, and
+//! execute arbitrary cross-contract calls once the approval threshold is met.
+//!
+//! ## Public Interface (ABI)
+//!
+//! | Function | Description |
+//! |---|---|
+//! | [`MultisigWallet::init`] | One-time initialisation with signers and threshold |
+//! | [`MultisigWallet::propose`] | Create a new proposal, returns its hash |
+//! | [`MultisigWallet::approve`] | Approve an existing proposal |
+//! | [`MultisigWallet::execute`] | Execute a proposal once threshold is met |
+//! | [`MultisigWallet::cancel`] | Cancel a pending proposal (contract auth required) |
+//! | [`MultisigWallet::add_signer`] | Add a signer (contract auth required) |
+//! | [`MultisigWallet::remove_signer`] | Remove a signer (contract auth required) |
+//! | [`MultisigWallet::set_threshold`] | Update the approval threshold (contract auth required) |
+//!
+//! ## Error Codes
+//!
+//! See [`Error`] for the full list of contract error variants.
 #![no_std]
 
 use soroban_sdk::{
@@ -8,20 +29,32 @@ use soroban_sdk::{
 #[cfg(test)]
 mod test;
 
+/// Errors returned by the multisig wallet contract.
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum Error {
+    /// `init` has not been called yet.
     NotInitialized = 1,
+    /// `init` has already been called.
     AlreadyInitialized = 2,
+    /// Threshold is zero or exceeds the number of signers.
     InvalidThreshold = 3,
+    /// Fewer signers provided than the required threshold.
     InsufficientSigners = 4,
+    /// Caller is not a registered signer.
     Unauthorized = 5,
+    /// No proposal exists with the given hash.
     ProposalNotFound = 6,
+    /// This signer has already approved this proposal.
     AlreadyApproved = 7,
+    /// Approval count has not reached the threshold yet.
     ThresholdNotMet = 8,
+    /// Proposal has already been executed.
     AlreadyExecuted = 9,
+    /// Proposal has already been cancelled.
     AlreadyCancelled = 10,
+    /// Supplied arguments are invalid for the requested self-call.
     InvalidArguments = 11,
 }
 

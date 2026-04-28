@@ -35,4 +35,3 @@ fn custom_vulndb_fixture_matches_admin_example() {
         "expected CUSTOM-AUTH-001 match, got {matches:?}"
     );
 }
-

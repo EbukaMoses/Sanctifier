@@ -1,3 +1,28 @@
+//! # Timelock Controller Contract
+//!
+//! Role-based timelock for Soroban.  Proposers schedule calls; executors run
+//! them after the minimum delay has elapsed; cancellers can abort pending ops.
+//!
+//! ## Public Interface (ABI)
+//!
+//! | Function | Description |
+//! |---|---|
+//! | [`TimelockController::init`] | One-time initialisation |
+//! | [`TimelockController::get_min_delay`] | Query the minimum delay (seconds) |
+//! | [`TimelockController::is_proposer`] | Check proposer role |
+//! | [`TimelockController::is_executor`] | Check executor role |
+//! | [`TimelockController::is_canceller`] | Check canceller role |
+//! | [`TimelockController::set_proposer`] | Grant / revoke proposer role (admin) |
+//! | [`TimelockController::set_executor`] | Grant / revoke executor role (admin) |
+//! | [`TimelockController::set_canceller`] | Grant / revoke canceller role (admin) |
+//! | [`TimelockController::update_delay`] | Change the minimum delay (admin) |
+//! | [`TimelockController::schedule`] | Schedule a call with a delay |
+//! | [`TimelockController::execute`] | Execute a ready scheduled call |
+//! | [`TimelockController::cancel`] | Cancel a pending scheduled call |
+//!
+//! ## Error Codes
+//!
+//! See [`TimelockError`] for the full list of contract error variants.
 #![no_std]
 
 use soroban_sdk::{
@@ -8,15 +33,23 @@ use soroban_sdk::{
 #[cfg(test)]
 mod test;
 
+/// Errors returned by the timelock controller contract.
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub enum TimelockError {
+    /// `init` has already been called.
     AlreadyInitialized = 1,
+    /// `init` has not been called yet.
     NotInitialized = 2,
+    /// Caller lacks the required role.
     Unauthorized = 3,
+    /// Supplied delay is less than `min_delay`.
     InsufficientDelay = 4,
+    /// No scheduled operation exists with the given hash.
     ProposalNotFound = 5,
+    /// The scheduled operation's ready timestamp has not been reached yet.
     ProposalNotReady = 6,
+    /// `new_delay` is invalid (reserved for future validation).
     InvalidDelay = 8,
 }
 

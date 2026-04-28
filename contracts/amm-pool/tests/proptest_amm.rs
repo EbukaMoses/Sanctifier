@@ -39,10 +39,9 @@ proptest! {
     ) {
         let lo = amount_small.min(amount_large);
         let hi = amount_small.max(amount_large);
-        match (calculate_swap_output(reserve_in, reserve_out, lo),
+        if let (Some(out_lo), Some(out_hi)) = (calculate_swap_output(reserve_in, reserve_out, lo),
                calculate_swap_output(reserve_in, reserve_out, hi)) {
-            (Some(out_lo), Some(out_hi)) => prop_assert!(out_hi >= out_lo),
-            _ => {}
+            prop_assert!(out_hi >= out_lo);
         }
     }
 
