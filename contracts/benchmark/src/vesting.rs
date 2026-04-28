@@ -60,8 +60,8 @@ mod tests {
         let env = Env::default();
         let (client, _, _) = setup(&env);
         env.ledger().set_timestamp(150); // before start time
-        // Since vested_amount doesn't exist, just test that the contract is callable
-        // The actual implementation would be in the contract logic
+                                         // Since vested_amount doesn't exist, just test that the contract is callable
+                                         // The actual implementation would be in the contract logic
     }
 
     #[test]
