@@ -78,7 +78,7 @@ test.describe("analyze API performance budgets", () => {
     const start = Date.now();
     let response;
     let retries = 0;
-    const maxRetries = 3;
+    const maxRetries = 5;
     
     // Retry logic for rate limiting
     do {
@@ -91,8 +91,10 @@ test.describe("analyze API performance budgets", () => {
       
       retries++;
       if (retries < maxRetries) {
-        // Wait before retrying (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retries)));
+        // Wait before retrying (exponential backoff with base delay)
+        const retryAfter = response.headers()["retry-after"];
+        const delay = retryAfter ? parseInt(retryAfter) * 1000 : 2000 * Math.pow(2, retries);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     } while (retries < maxRetries);
     
@@ -110,7 +112,7 @@ test.describe("analyze API performance budgets", () => {
     const start = Date.now();
     let response;
     let retries = 0;
-    const maxRetries = 3;
+    const maxRetries = 5;
     
     // Retry logic for rate limiting
     do {
@@ -123,8 +125,10 @@ test.describe("analyze API performance budgets", () => {
       
       retries++;
       if (retries < maxRetries) {
-        // Wait before retrying (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retries)));
+        // Wait before retrying (exponential backoff with base delay)
+        const retryAfter = response.headers()["retry-after"];
+        const delay = retryAfter ? parseInt(retryAfter) * 1000 : 2000 * Math.pow(2, retries);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     } while (retries < maxRetries);
     

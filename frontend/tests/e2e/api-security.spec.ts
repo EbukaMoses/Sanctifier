@@ -49,7 +49,7 @@ test.describe("API Security - File Size Validation", () => {
   test("returns 413 for files exceeding size limit", async ({ request }) => {
     const largeContent = "x".repeat(300 * 1024);
 
-    const response = await request.post("/api/analyze", {
+    let response = await request.post("/api/analyze", {
       multipart: {
         contract: {
           name: "large.rs",
@@ -58,6 +58,22 @@ test.describe("API Security - File Size Validation", () => {
         },
       },
     });
+
+    // If we hit rate limit, wait and retry once
+    if (response.status() === 429) {
+      const retryAfter = response.headers()["retry-after"] || "2";
+      await new Promise(resolve => setTimeout(resolve, parseInt(retryAfter) * 1000));
+      
+      response = await request.post("/api/analyze", {
+        multipart: {
+          contract: {
+            name: "large.rs",
+            mimeType: "text/plain",
+            buffer: Buffer.from(largeContent),
+          },
+        },
+      });
+    }
 
     expect(response.status()).toBe(413);
     
@@ -68,7 +84,7 @@ test.describe("API Security - File Size Validation", () => {
 
 test.describe("API Security - Input Validation", () => {
   test("rejects non-.rs file extensions", async ({ request }) => {
-    const response = await request.post("/api/analyze", {
+    let response = await request.post("/api/analyze", {
       multipart: {
         contract: {
           name: "test.txt",
@@ -77,6 +93,22 @@ test.describe("API Security - Input Validation", () => {
         },
       },
     });
+
+    // If we hit rate limit, wait and retry once
+    if (response.status() === 429) {
+      const retryAfter = response.headers()["retry-after"] || "2";
+      await new Promise(resolve => setTimeout(resolve, parseInt(retryAfter) * 1000));
+      
+      response = await request.post("/api/analyze", {
+        multipart: {
+          contract: {
+            name: "test.txt",
+            mimeType: "text/plain",
+            buffer: Buffer.from("content"),
+          },
+        },
+      });
+    }
 
     expect(response.status()).toBe(400);
     
@@ -87,7 +119,7 @@ test.describe("API Security - Input Validation", () => {
   test("rejects invalid UTF-8 content", async ({ request }) => {
     const invalidUtf8 = Buffer.from([0xff, 0xfe, 0xfd, 0xfc]);
     
-    const response = await request.post("/api/analyze", {
+    let response = await request.post("/api/analyze", {
       multipart: {
         contract: {
           name: "invalid.rs",
@@ -96,6 +128,22 @@ test.describe("API Security - Input Validation", () => {
         },
       },
     });
+
+    // If we hit rate limit, wait and retry once
+    if (response.status() === 429) {
+      const retryAfter = response.headers()["retry-after"] || "2";
+      await new Promise(resolve => setTimeout(resolve, parseInt(retryAfter) * 1000));
+      
+      response = await request.post("/api/analyze", {
+        multipart: {
+          contract: {
+            name: "invalid.rs",
+            mimeType: "text/plain",
+            buffer: invalidUtf8,
+          },
+        },
+      });
+    }
 
     expect(response.status()).toBe(400);
     
@@ -162,9 +210,19 @@ test.describe("API Security - Timeout Handling", () => {
 
 test.describe("API Security - Error Handling", () => {
   test("returns 400 when no file attached", async ({ request }) => {
-    const response = await request.post("/api/analyze", {
+    let response = await request.post("/api/analyze", {
       multipart: {},
     });
+
+    // If we hit rate limit, wait and retry once
+    if (response.status() === 429) {
+      const retryAfter = response.headers()["retry-after"] || "2";
+      await new Promise(resolve => setTimeout(resolve, parseInt(retryAfter) * 1000));
+      
+      response = await request.post("/api/analyze", {
+        multipart: {},
+      });
+    }
 
     expect(response.status()).toBe(400);
     
@@ -173,7 +231,7 @@ test.describe("API Security - Error Handling", () => {
   });
 
   test("handles missing contract field gracefully", async ({ request }) => {
-    const response = await request.post("/api/analyze", {
+    let response = await request.post("/api/analyze", {
       multipart: {
         other: {
           name: "test.rs",
@@ -182,6 +240,22 @@ test.describe("API Security - Error Handling", () => {
         },
       },
     });
+
+    // If we hit rate limit, wait and retry once
+    if (response.status() === 429) {
+      const retryAfter = response.headers()["retry-after"] || "2";
+      await new Promise(resolve => setTimeout(resolve, parseInt(retryAfter) * 1000));
+      
+      response = await request.post("/api/analyze", {
+        multipart: {
+          other: {
+            name: "test.rs",
+            mimeType: "text/plain",
+            buffer: Buffer.from("fn main() {}"),
+          },
+        },
+      });
+    }
 
     expect(response.status()).toBe(400);
   });
