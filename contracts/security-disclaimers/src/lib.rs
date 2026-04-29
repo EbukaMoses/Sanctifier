@@ -270,19 +270,19 @@ mod tests {
     #[test]
     fn test_audit_requirements() {
         let env = Env::default();
-        assert!(SecurityDisclaimer::requires_audit(
+        assert!(requires_audit(
             env.clone(),
             SecurityLevel::Critical
         ));
-        assert!(SecurityDisclaimer::requires_audit(
+        assert!(requires_audit(
             env.clone(),
             SecurityLevel::High
         ));
-        assert!(!SecurityDisclaimer::requires_audit(
+        assert!(!requires_audit(
             env.clone(),
             SecurityLevel::Medium
         ));
-        assert!(!SecurityDisclaimer::requires_audit(
+        assert!(!requires_audit(
             env.clone(),
             SecurityLevel::Low
         ));
@@ -293,25 +293,25 @@ mod tests {
         let env = Env::default();
 
         // Critical level requires both admin and upgrade
-        assert!(SecurityDisclaimer::validate_security_config(
+        assert!(validate_security_config(
             env.clone(),
             SecurityLevel::Critical,
             true,
             true
         ));
-        assert!(!SecurityDisclaimer::validate_security_config(
+        assert!(!validate_security_config(
             env.clone(),
             SecurityLevel::Critical,
             true,
             false
         ));
-        assert!(!SecurityDisclaimer::validate_security_config(
+        assert!(!validate_security_config(
             env.clone(),
             SecurityLevel::Critical,
             false,
             true
         ));
-        assert!(!SecurityDisclaimer::validate_security_config(
+        assert!(!validate_security_config(
             env.clone(),
             SecurityLevel::Critical,
             false,
@@ -319,25 +319,25 @@ mod tests {
         ));
 
         // High level requires admin
-        assert!(SecurityDisclaimer::validate_security_config(
+        assert!(validate_security_config(
             env.clone(),
             SecurityLevel::High,
             true,
             false
         ));
-        assert!(SecurityDisclaimer::validate_security_config(
+        assert!(validate_security_config(
             env.clone(),
             SecurityLevel::High,
             true,
             true
         ));
-        assert!(!SecurityDisclaimer::validate_security_config(
+        assert!(!validate_security_config(
             env.clone(),
             SecurityLevel::High,
             false,
             true
         ));
-        assert!(!SecurityDisclaimer::validate_security_config(
+        assert!(!validate_security_config(
             env.clone(),
             SecurityLevel::High,
             false,
@@ -345,25 +345,25 @@ mod tests {
         ));
 
         // Medium and Low levels have no requirements
-        assert!(SecurityDisclaimer::validate_security_config(
+        assert!(validate_security_config(
             env.clone(),
             SecurityLevel::Medium,
             false,
             false
         ));
-        assert!(SecurityDisclaimer::validate_security_config(
+        assert!(validate_security_config(
             env.clone(),
             SecurityLevel::Medium,
             true,
             true
         ));
-        assert!(SecurityDisclaimer::validate_security_config(
+        assert!(validate_security_config(
             env.clone(),
             SecurityLevel::Low,
             false,
             false
         ));
-        assert!(SecurityDisclaimer::validate_security_config(
+        assert!(validate_security_config(
             env.clone(),
             SecurityLevel::Low,
             true,
