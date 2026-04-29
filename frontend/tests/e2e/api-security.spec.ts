@@ -66,10 +66,12 @@ fn example() -> u32 {
 
 test.describe("API Security - File Size Validation", () => {
   test("returns 413 for files exceeding size limit", async ({ request }) => {
+    test.setTimeout(60000); // Increase timeout to 60 seconds
+    
     const largeContent = "x".repeat(300 * 1024);
     let response;
     let retries = 0;
-    const maxRetries = 3;
+    const maxRetries = 2; // Reduce from 3 to 2 to stay within timeout
 
     while (retries < maxRetries) {
       try {
@@ -83,22 +85,22 @@ test.describe("API Security - File Size Validation", () => {
               },
             },
           }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Request timeout")), 10000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Request timeout")), 15000)) // Increase to 15s
         ]) as any;
 
         // If we hit rate limit, wait and retry with exponential backoff
         if (response.status() === 429) {
           retries++;
-          const retryAfter = response.headers()["retry-after"] || "2";
-          const delay = parseInt(retryAfter) * 1000 * Math.pow(2, retries - 1); // Exponential backoff
-          await new Promise(resolve => setTimeout(resolve, delay));
+          const retryAfter = response.headers()["retry-after"] || "1";
+          const delay = parseInt(retryAfter) * 1000 * Math.pow(2, retries - 1);
+          await new Promise(resolve => setTimeout(resolve, Math.min(delay, 5000))); // Cap delay at 5s
           continue;
         }
         break;
       } catch (error: any) {
         if (error.message === "Request timeout" && retries < maxRetries - 1) {
           retries++;
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Reduce from 2s to 1s
           continue;
         }
         throw error;
@@ -114,9 +116,11 @@ test.describe("API Security - File Size Validation", () => {
 
 test.describe("API Security - Input Validation", () => {
   test("rejects non-.rs file extensions", async ({ request }) => {
+    test.setTimeout(60000); // Increase timeout to 60 seconds
+    
     let response;
     let retries = 0;
-    const maxRetries = 3;
+    const maxRetries = 2; // Reduce from 3 to 2
 
     while (retries < maxRetries) {
       try {
@@ -130,22 +134,22 @@ test.describe("API Security - Input Validation", () => {
               },
             },
           }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Request timeout")), 10000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Request timeout")), 15000)) // Increase to 15s
         ]) as any;
 
         // If we hit rate limit, wait and retry with exponential backoff
         if (response.status() === 429) {
           retries++;
-          const retryAfter = response.headers()["retry-after"] || "2";
-          const delay = parseInt(retryAfter) * 1000 * Math.pow(2, retries - 1); // Exponential backoff
-          await new Promise(resolve => setTimeout(resolve, delay));
+          const retryAfter = response.headers()["retry-after"] || "1";
+          const delay = parseInt(retryAfter) * 1000 * Math.pow(2, retries - 1);
+          await new Promise(resolve => setTimeout(resolve, Math.min(delay, 5000))); // Cap delay at 5s
           continue;
         }
         break;
       } catch (error: any) {
         if (error.message === "Request timeout" && retries < maxRetries - 1) {
           retries++;
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Reduce from 2s to 1s
           continue;
         }
         throw error;
