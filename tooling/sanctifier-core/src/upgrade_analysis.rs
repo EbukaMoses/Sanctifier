@@ -41,15 +41,11 @@ pub fn analyze_upgrade_patterns(source: &str) -> UpgradeReport {
 
     for item in &file.items {
         match item {
-            syn::Item::Struct(s) => {
-                if has_contracttype(&s.attrs) {
-                    report.storage_types.push(s.ident.to_string());
-                }
+            syn::Item::Struct(s) if has_contracttype(&s.attrs) => {
+                report.storage_types.push(s.ident.to_string());
             }
-            syn::Item::Enum(e) => {
-                if has_contracttype(&e.attrs) {
-                    report.storage_types.push(e.ident.to_string());
-                }
+            syn::Item::Enum(e) if has_contracttype(&e.attrs) => {
+                report.storage_types.push(e.ident.to_string());
             }
             syn::Item::Impl(i) => {
                 for impl_item in &i.items {
