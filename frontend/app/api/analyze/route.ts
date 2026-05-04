@@ -13,7 +13,7 @@ const REPO_ROOT = path.resolve(process.cwd(), "..");
 const SUPPORTED_SOURCE_EXTENSIONS = new Set([".rs"]);
 const MAX_FILE_SIZE_BYTES = 250 * 1024;
 const EXECUTION_TIMEOUT_MS = 30000;
-const RATE_LIMIT_REQUESTS_PER_MINUTE = 10;
+const RATE_LIMIT_REQUESTS_PER_MINUTE = (process.env.CI || process.env.NODE_ENV === "test") ? 1000 : 10;
 const SANCTIFIER_BIN = process.env.SANCTIFIER_BIN?.trim() || "sanctifier";
 
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();

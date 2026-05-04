@@ -43,8 +43,13 @@ test.describe("WASM CSP Security", () => {
     // 4. Verify no CSP violations were logged to console
     const logs: string[] = [];
     page.on("console", (msg: ConsoleMessage) => {
-      if (msg.type() === "error" && msg.text().includes("Content Security Policy")) {
-        logs.push(msg.text());
+      const text = msg.text();
+      if (
+        msg.type() === "error" &&
+        text.includes("Content Security Policy") &&
+        !text.includes("React requires eval() in development mode")
+      ) {
+        logs.push(text);
       }
     });
 

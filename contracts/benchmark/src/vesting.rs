@@ -37,7 +37,16 @@ mod tests {
         let client = VestingContractClient::new(env, &id);
 
         // start=100, cliff=200, duration=1000 (simple round numbers)
-        client.init(&admin, &beneficiary, &token_id, &100u64, &200u64, &1000u64, &total, &true);
+        client.init(
+            &admin,
+            &beneficiary,
+            &token_id,
+            &100u64,
+            &200u64,
+            &1000u64,
+            &total,
+            &true,
+        );
         (client, admin, beneficiary)
     }
 
