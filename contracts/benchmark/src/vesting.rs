@@ -38,6 +38,17 @@ mod tests {
 
         // start=100, end=1100 (simple round numbers)
         client.create_vesting(&beneficiary, &total, &100u64, &1100u64);
+        // start=100, cliff=200, duration=1000 (simple round numbers)
+        client.init(
+            &admin,
+            &beneficiary,
+            &token_id,
+            &100u64,
+            &200u64,
+            &1000u64,
+            &total,
+            &true,
+        );
         (client, admin, beneficiary)
     }
 
